@@ -1,5 +1,5 @@
-
 import pygame as p
+
 
 def main():
     print("D:")
@@ -7,3 +7,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# To update requirements: pip freeze > requirements.txt in Pycharm console.
