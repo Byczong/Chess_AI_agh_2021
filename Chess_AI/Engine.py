@@ -12,62 +12,50 @@ class Piece:
         self.position = position
         self.color = color
 
+    def move(self, new_position):
+        self.position = new_position
+
 
 class King(Piece):
-    def __init__(self, position, image):
-        super().__init__(position)
+    def __init__(self, position, color, image):
+        super().__init__(position, color)
         self.image = image
 
     def possible_moves(self):
         pass
-
-    def move(self, new_position):
-        self.position = new_position
 
 
 class Bishop(Piece):
-    def __init__(self, position, image):
-        super().__init__(position)
+    def __init__(self, position, color, image):
+        super().__init__(position, color)
         self.image = image
 
     def possible_moves(self):
         pass
-
-    def move(self, new_position):
-        self.position = new_position
 
 
 class Rook(Piece):
-    def __init__(self, position, image):
-        super().__init__(position)
+    def __init__(self, position, color, image):
+        super().__init__(position, color)
         self.image = image
 
     def possible_moves(self):
         pass
-
-    def move(self, new_position):
-        self.position = new_position
 
 
 class Knight(Piece):
-    def __init__(self, position, image):
-        super().__init__(position)
+    def __init__(self, position, color, image):
+        super().__init__(position, color)
         self.image = image
 
     def possible_moves(self):
         pass
-
-    def move(self, new_position):
-        self.position = new_position
 
 
 class Pawn(Piece):
-    def __init__(self, position, image):
-        super().__init__(position)
+    def __init__(self, position, color, image):
+        super().__init__(position, color)
         self.image = image
 
     def possible_moves(self):
         pass
-
-    def move(self, new_position):
-        self.position = new_position
