@@ -5,9 +5,11 @@ class ChessboardState:
         self.board = [[None] * 8 for i in range(8)]
         self.init_board()
         self.white_to_move = True
-        self.white_king_position = [7, 4]
-        self.black_king_position = [0, 4]
+        self.white_king = self.board[7][4]
+        self.black_king = self.board[0][4]
         self.moveLog = []
+        for move in self.board[7][4].legal_moves():
+            print(move)
 
     def init_board(self):
         for row in (0, 7):
@@ -27,8 +29,6 @@ class ChessboardState:
             self.board[row][7] = Rook([row, 7], color, self)
             for pawns_column in range(8):
                 self.board[pawns_row][pawns_column] = Pawn([pawns_row, pawns_column], color, self)
-        self.board[1][4] = Queen([1, 4], "black", self)
-        self.board[6][4] = None
 
     def is_move_valid(self, old_position, new_position):
         old_position_piece = self.board[old_position[0]][old_position[1]]
@@ -39,10 +39,10 @@ class ChessboardState:
         old_position_piece.position = new_position
 
         if self.white_to_move:
-            king = self.board[self.white_king_position[0]][self.white_king_position[1]]
+            king = self.white_king
             pawn_row_step = -1
         else:
-            king = self.board[self.black_king_position[0]][self.black_king_position[1]]
+            king = self.black_king
             pawn_row_step = 1
 
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -115,12 +115,8 @@ class ChessboardState:
         piece.position = new_position
         if self.white_to_move:
             self.white_to_move = False
-            if isinstance(piece, King):
-                self.white_king_position = new_position
         else:
             self.white_to_move = True
-            if isinstance(piece, King):
-                self.black_king_position = new_position
 
     def is_move_out_of_board(self, position):
         if 7 >= position[0] >= 0 and 7 >= position[1] >= 0:
