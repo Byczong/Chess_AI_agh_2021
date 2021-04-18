@@ -7,9 +7,6 @@ class ChessboardState:
         self.white_to_move = True
         self.white_king = self.board[7][4]
         self.black_king = self.board[0][4]
-        self.moveLog = []
-        for move in self.board[7][4].legal_moves():
-            print(move)
 
     def init_board(self):
         for row in (0, 7):
@@ -113,6 +110,43 @@ class ChessboardState:
         self.board[new_position[0]][new_position[1]] = piece
         self.board[old_position[0]][old_position[1]] = None
         piece.position = new_position
+
+        # pawn promotion
+        if isinstance(piece, Pawn):
+            if piece.color == "white" and new_position[0] == 0:
+                promoted_pawn = Queen(new_position, "white", self)
+                self.board[new_position[0]][new_position[1]] = promoted_pawn
+            elif piece.color == "black" and new_position[0] == 7:
+                promoted_pawn = Queen(new_position, "black", self)
+                self.board[new_position[0]][new_position[1]] = promoted_pawn
+
+        # move rook if castling
+        if isinstance(piece, King) and abs(old_position[1] - new_position[1]) == 2:
+            if new_position == [7, 6]:
+                rook = self.board[7][7]
+                self.board[7][5] = rook
+                self.board[7][7] = None
+                rook.position = [7, 5]
+            elif new_position == [7, 2]:
+                rook = self.board[7][0]
+                self.board[7][3] = rook
+                self.board[7][0] = None
+                rook.position = [7, 3]
+            elif new_position == [0, 6]:
+                rook = self.board[0][7]
+                self.board[0][5] = rook
+                self.board[0][7] = None
+                rook.position = [0, 5]
+            elif new_position == [0, 2]:
+                rook = self.board[0][0]
+                self.board[0][3] = rook
+                self.board[0][0] = None
+                rook.position = [0, 3]
+
+        if isinstance(piece, Pawn) or isinstance(piece, Rook) or isinstance(piece, King):
+            if piece.first_move:
+                piece.first_move = False
+
         if self.white_to_move:
             self.white_to_move = False
         else:
@@ -147,6 +181,11 @@ class Piece:
 
 
 class King(Piece):
+    def __init__(self, position, color, board_state):
+        super().__init__(position, color, board_state)
+        self.value = float('inf')
+        self.first_move = True
+
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
@@ -157,6 +196,26 @@ class King(Piece):
                         yield new_position
                 else:
                     yield new_position
+
+        if self.color == "white":
+            row = 7
+        else:
+            row = 0
+        piece = self.board_state.board[row][7]
+        if self.first_move and piece is not None:
+            if isinstance(piece, Rook):
+                if piece.first_move and self.board_state.board[row][5] is None and \
+                        self.board_state.board[row][6] is None:
+                    if self.board_state.is_move_valid([row, 4], [row, 5]):
+                        yield [row, 6]
+
+        piece = self.board_state.board[row][0]
+        if self.first_move and piece is not None:
+            if isinstance(piece, Rook):
+                if piece.first_move and self.board_state.board[row][3] is None and \
+                        self.board_state.board[row][2] is None and self.board_state.board[row][1] is None:
+                    if self.board_state.is_move_valid([row, 4], [row, 3]):
+                        yield [row, 2]
 
 
 class Queen(Piece):
@@ -183,6 +242,7 @@ class Rook(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
         self.value = 5
+        self.first_move = True
 
     def pseudo_legal_moves(self):
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
