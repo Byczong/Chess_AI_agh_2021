@@ -215,7 +215,8 @@ class King(Piece):
             if isinstance(piece, Rook):
                 if piece.first_move and self.board_state.board[row][5] is None and \
                         self.board_state.board[row][6] is None:
-                    if self.board_state.is_move_valid([row, 4], [row, 5]):
+                    if self.board_state.is_move_valid([row, 4], [row, 5]) and \
+                            self.board_state.is_move_valid([row, 7], [row, 5]):
                         yield [row, 6]
 
         piece = self.board_state.board[row][0]
@@ -223,7 +224,8 @@ class King(Piece):
             if isinstance(piece, Rook):
                 if piece.first_move and self.board_state.board[row][3] is None and \
                         self.board_state.board[row][2] is None and self.board_state.board[row][1] is None:
-                    if self.board_state.is_move_valid([row, 4], [row, 3]):
+                    if self.board_state.is_move_valid([row, 4], [row, 3]) and \
+                            self.board_state.is_move_valid([row, 0], [row, 3]):
                         yield [row, 2]
 
     def move(self, new_position):
