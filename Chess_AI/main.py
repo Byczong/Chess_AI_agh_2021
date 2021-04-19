@@ -106,24 +106,24 @@ def main():
         p.display.flip()
 
 
-"""Load piece's images from "pieces" folder"""
 # Allow accessing a piece's image by PIECE['c#'], where c - color, # - abr. piece's name
 def load_pieces():
+    """Load piece's images from "pieces" folder"""
     pieces = ['bB', 'bK', 'bN', 'bP', 'bQ', 'bR', 'wB', 'wK', 'wN', 'wP', 'wQ', 'wR']
     for piece in pieces:
         PIECES[piece] = p.transform.scale(p.image.load("pieces/" + piece + ".png"), (SQUARE_SIZE, SQUARE_SIZE))
 
 
-"""Show the game"""
 def draw_chessboard_state(chessboard_state, selected_tile, possible_moves):
+    """Show the game"""
     draw_chessboard()
     highlight_possible_moves(selected_tile, possible_moves, chessboard_state)
     draw_pieces(chessboard_state)
     # TODO: Highlight check
 
 
-"""Draw the squares on the board along with the border describing ranks and files"""
 def draw_chessboard():
+    """Draw the squares on the board along with the border describing ranks and files"""
     for row in range(8):
         for col in range(8):
             p.draw.rect(SCREEN, get_tile_color(row, col),
@@ -140,8 +140,8 @@ def draw_chessboard():
         SCREEN.blit(label, (col * SQUARE_SIZE + SQUARE_SIZE // 3 + 4, 8 * SQUARE_SIZE + BORDER_WIDTH // 6))
 
 
-"""Highlight all the possible moves along with the selected tile"""
 def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
+    """Highlight all the possible moves along with the selected tile"""
     if selected_tile == ():
         return
 
@@ -159,8 +159,8 @@ def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
                                SQUARE_SIZE))
 
 
-"""Draw pieces on the board"""
 def draw_pieces(chessboard_state):
+    """Draw pieces on the board"""
     for row in range(8):
         for col in range(8):
             piece = chessboard_state.board[row][col]
@@ -169,31 +169,31 @@ def draw_pieces(chessboard_state):
                             p.Rect(col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
 
 
-"""Get list() of legal move generator (if color is wrong or piece is None return None)"""
 def get_legal_moves_list(piece):
+    """Get list() of legal move generator (if color is wrong or piece is None return None)"""
     if piece is not None:
         return piece.get_legal_moves_list_including_color()
     else:
         return None
 
-"""Get rank string from ChessboardState.board index"""
 def get_rank(n):
+    """Get rank string from ChessboardState.board index"""
     return BOARD_RANKS[7 - n]
 
-"""Get file string from ChessboardState.board index"""
 def get_file(n):
+    """Get file string from ChessboardState.board index"""
     return BOARD_FILES[n]
 
-"""Get tile string from ChessboardState.board indices"""
 def get_tile_str(pos):
+    """Get tile string from ChessboardState.board indices"""
     return get_file(pos[1]) + get_rank(pos[0])
 
-"""Get tile's color from ChessboardState.board index"""
 def get_tile_color(row, column):
+    """Get tile's color from ChessboardState.board index"""
     return COLOR_LIGHT if (row + column) % 2 == 0 else COLOR_DARK
 
-"""Print possible moves"""
 def print_possible_moves(possible_moves):
+    """Print possible moves"""
     if possible_moves is None:
         print(f"No moves possible")
     else:
