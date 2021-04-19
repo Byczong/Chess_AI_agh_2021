@@ -45,7 +45,7 @@ class ChessboardState:
 
         en_passant = False
         pawn = None
-        if isinstance(old_position_piece, Pawn) and new_position_piece is None and\
+        if isinstance(old_position_piece, Pawn) and new_position_piece is None and \
                 abs(new_position[1] - old_position[1]) == 1:
             pawn = self.board[new_position[0] - pawn_row_step][new_position[1]]
             self.board[new_position[0] - pawn_row_step][new_position[1]] = None
@@ -136,70 +136,6 @@ class ChessboardState:
             self.board[pawn.position[0]][pawn.position[1]] = pawn
         return True
 
-    def move(self, old_position, new_position):
-        self.move_counter += 1
-        piece = self.board[old_position[0]][old_position[1]]
-
-        # en_passant
-        if isinstance(piece, Pawn) and self.board[new_position[0]][new_position[1]] is None and \
-                abs(new_position[1] - old_position[1]) == 1:
-            if piece.color == "white":
-                pawn_row_step = -1
-            else:
-                pawn_row_step = 1
-            pawn = self.board[new_position[0] - pawn_row_step][new_position[1]]
-            self.board[new_position[0] - pawn_row_step][new_position[1]] = None
-
-        # move piece
-        self.board[new_position[0]][new_position[1]] = piece
-        self.board[old_position[0]][old_position[1]] = None
-        piece.position = new_position
-
-        # pawn promotion
-        if isinstance(piece, Pawn):
-            if piece.color == "white" and new_position[0] == 0:
-                promoted_pawn = Queen(new_position, "white", self)
-                self.board[new_position[0]][new_position[1]] = promoted_pawn
-            elif piece.color == "black" and new_position[0] == 7:
-                promoted_pawn = Queen(new_position, "black", self)
-                self.board[new_position[0]][new_position[1]] = promoted_pawn
-
-        # move rook if castling
-        if isinstance(piece, King) and abs(old_position[1] - new_position[1]) == 2:
-            if new_position == (7, 6):
-                rook = self.board[7][7]
-                self.board[7][5] = rook
-                self.board[7][7] = None
-                rook.position = [7, 5]
-            elif new_position == (7, 2):
-                rook = self.board[7][0]
-                self.board[7][3] = rook
-                self.board[7][0] = None
-                rook.position = [7, 3]
-            elif new_position == (0, 6):
-                rook = self.board[0][7]
-                self.board[0][5] = rook
-                self.board[0][7] = None
-                rook.position = [0, 5]
-            elif new_position == (0, 2):
-                rook = self.board[0][0]
-                self.board[0][3] = rook
-                self.board[0][0] = None
-                rook.position = [0, 3]
-
-        if isinstance(piece, Pawn) or isinstance(piece, Rook) or isinstance(piece, King):
-            if piece.first_move:
-                piece.first_move = False
-        if isinstance(piece, Pawn):
-            if abs(new_position[0] - old_position[0]) == 2:
-                piece.moved_by_two = True
-            piece.last_move_number = self.move_counter
-
-        if self.white_to_move:
-            self.white_to_move = False
-        else:
-            self.white_to_move = True
-
     @staticmethod
     def is_move_out_of_board(position):
         if 7 >= position[0] >= 0 and 7 >= position[1] >= 0:
@@ -238,7 +174,15 @@ class Piece:
         else:  # Not this color's turn
             return None
 
-
+    def move(self, new_position):
+        self.board_state.move_counter += 1
+        self.board_state.board[self.position[0]][self.position[1]] = None
+        self.board_state.board[new_position[0]][new_position[1]] = self
+        self.position = new_position
+        if self.board_state.white_to_move:
+            self.board_state.white_to_move = False
+        else:
+            self.board_state.white_to_move = True
 
     def pseudo_legal_moves(self):
         raise NotImplementedError("Method is not implemented")
@@ -283,6 +227,43 @@ class King(Piece):
                         self.board_state.board[row][2] is None and self.board_state.board[row][1] is None:
                     if self.board_state.is_move_valid([row, 4], [row, 3]):
                         yield [row, 2]
+
+    def move(self, new_position):
+        self.board_state.move_counter += 1
+
+        if abs(self.position[1] - new_position[1]) == 2:
+            if new_position == (7, 6):
+                rook = self.board_state.board[7][7]
+                self.board_state.board[7][5] = rook
+                self.board_state.board[7][7] = None
+                rook.position = [7, 5]
+            elif new_position == (7, 2):
+                rook = self.board_state.board[7][0]
+                self.board_state.board[7][3] = rook
+                self.board_state.board[7][0] = None
+                rook.position = [7, 3]
+            elif new_position == (0, 6):
+                rook = self.board_state.board[0][7]
+                self.board_state.board[0][5] = rook
+                self.board_state.board[0][7] = None
+                rook.position = [0, 5]
+            elif new_position == (0, 2):
+                rook = self.board_state.board[0][0]
+                self.board_state.board[0][3] = rook
+                self.board_state.board[0][0] = None
+                rook.position = [0, 3]
+
+        self.board_state.board[self.position[0]][self.position[1]] = None
+        self.board_state.board[new_position[0]][new_position[1]] = self
+        self.position = new_position
+
+        if self.first_move:
+            self.first_move = False
+
+        if self.board_state.white_to_move:
+            self.board_state.white_to_move = False
+        else:
+            self.board_state.white_to_move = True
 
     def __str__(self):
         return "wK" if self.color == "white" else "bK"
@@ -421,6 +402,41 @@ class Pawn(Piece):
                         if new_position_piece.last_move_number == self.board_state.move_counter and new_position_piece.moved_by_two:
                             new_position[0] += row_step
                             yield new_position
+
+    def move(self, new_position):
+        self.board_state.move_counter += 1
+        self.last_move_number = self.board_state.move_counter
+        if abs(self.position[0] - new_position[0]) == 2:
+            self.moved_by_two = True
+
+        # en_passant
+        if self.board_state.board[new_position[0]][new_position[1]] is None and \
+                abs(new_position[1] - self.position[1]) == 1:
+            if self.color == "white":
+                pawn_row_step = -1
+            else:
+                pawn_row_step = 1
+            self.board_state.board[new_position[0] - pawn_row_step][new_position[1]] = None
+
+        self.board_state.board[self.position[0]][self.position[1]] = None
+        self.board_state.board[new_position[0]][new_position[1]] = self
+        self.position = new_position
+
+        # pawn promotion
+        if self.color == "white" and new_position[0] == 0:
+            promoted_pawn = Queen(new_position, self.color, self.board_state)
+            self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
+        elif self.color == "black" and new_position[0] == 7:
+            promoted_pawn = Queen(new_position, self.color, self)
+            self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
+
+        if self.first_move:
+            self.first_move = False
+
+        if self.board_state.white_to_move:
+            self.board_state.white_to_move = False
+        else:
+            self.board_state.white_to_move = True
 
     def __str__(self):
         return "wP" if self.color == "white" else "bP"

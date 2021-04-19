@@ -86,7 +86,7 @@ def main():
                         # Second position selected
                         elif len(tiles_clicked_on) == 2:
                             if list(selected_tile) in possible_moves:
-                                chessboard_state.move(tiles_clicked_on[0], tiles_clicked_on[1])
+                                chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]].move(tiles_clicked_on[1])
                                 reset_move_attempt()
                             # First position selected v2
                             else:
