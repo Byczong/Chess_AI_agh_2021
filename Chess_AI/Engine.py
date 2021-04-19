@@ -237,21 +237,25 @@ class King(Piece):
                 self.board_state.board[7][5] = rook
                 self.board_state.board[7][7] = None
                 rook.position = [7, 5]
+                rook.first_move = False
             elif new_position == (7, 2):
                 rook = self.board_state.board[7][0]
                 self.board_state.board[7][3] = rook
                 self.board_state.board[7][0] = None
                 rook.position = [7, 3]
+                rook.first_move = False
             elif new_position == (0, 6):
                 rook = self.board_state.board[0][7]
                 self.board_state.board[0][5] = rook
                 self.board_state.board[0][7] = None
                 rook.position = [0, 5]
+                rook.first_move = False
             elif new_position == (0, 2):
                 rook = self.board_state.board[0][0]
                 self.board_state.board[0][3] = rook
                 self.board_state.board[0][0] = None
                 rook.position = [0, 3]
+                rook.first_move = False
 
         self.board_state.board[self.position[0]][self.position[1]] = None
         self.board_state.board[new_position[0]][new_position[1]] = self
@@ -311,6 +315,21 @@ class Rook(Piece):
                     yield new_position
                     new_position[0] += step[0]
                     new_position[1] += step[1]
+
+    def move(self, new_position):
+        self.board_state.move_counter += 1
+
+        self.board_state.board[self.position[0]][self.position[1]] = None
+        self.board_state.board[new_position[0]][new_position[1]] = self
+        self.position = new_position
+
+        if self.first_move:
+            self.first_move = False
+
+        if self.board_state.white_to_move:
+            self.board_state.white_to_move = False
+        else:
+            self.board_state.white_to_move = True
 
     def __str__(self):
         return "wR" if self.color == "white" else "bR"
