@@ -395,7 +395,6 @@ class Pawn(Piece):
             new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
             if new_position_piece is None:
                 yield new_position
-
                 new_position[0] += row_step
                 if not ChessboardState.is_move_out_of_board(new_position) and self.first_move:
                     new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
