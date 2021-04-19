@@ -2,7 +2,7 @@
 
 class ChessboardState:
     def __init__(self):
-        self.board = [[None] * 8 for i in range(8)]
+        self.board = [[None] * 8 for _ in range(8)]
         self.init_board()
         self.white_to_move = True
         self.white_king = self.board[7][4]
@@ -44,7 +44,7 @@ class ChessboardState:
 
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
-            while not self.is_move_out_of_board(threat_position):
+            while not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
@@ -61,7 +61,7 @@ class ChessboardState:
 
         for step in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
-            while not self.is_move_out_of_board(threat_position):
+            while not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
@@ -78,7 +78,7 @@ class ChessboardState:
 
         for step in ((-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1), (2, -1), (1, -2)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
-            if not self.is_move_out_of_board(threat_position):
+            if not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
@@ -90,7 +90,7 @@ class ChessboardState:
 
         for step in ((pawn_row_step, -1), (pawn_row_step, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
-            if not self.is_move_out_of_board(threat_position):
+            if not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
@@ -152,7 +152,8 @@ class ChessboardState:
         else:
             self.white_to_move = True
 
-    def is_move_out_of_board(self, position):
+    @staticmethod
+    def is_move_out_of_board(position):
         if 7 >= position[0] >= 0 and 7 >= position[1] >= 0:
             return False
         else:
@@ -176,7 +177,19 @@ class Piece:
             if self.board_state.is_move_valid(self.position, move):
                 yield move
 
+    def get_legal_moves_list_including_color(self):
+        gen = self.legal_moves()
+        if self.board_state.white_to_move and self.color == "white":
+            return list(gen)
+        elif not self.board_state.white_to_move and self.color == "black":
+            return list(gen)
+        else:  # Not this color's turn
+            return None
+
     def pseudo_legal_moves(self):
+        raise NotImplementedError("Method is not implemented")
+
+    def __str__(self):
         raise NotImplementedError("Method is not implemented")
 
 
@@ -189,7 +202,7 @@ class King(Piece):
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            if not self.board_state.is_move_out_of_board(new_position):
+            if not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
@@ -217,6 +230,9 @@ class King(Piece):
                     if self.board_state.is_move_valid([row, 4], [row, 3]):
                         yield [row, 2]
 
+    def __str__(self):
+        return "wK" if self.color == "white" else "bK"
+
 
 class Queen(Piece):
     def __init__(self, position, color, board_state):
@@ -226,7 +242,7 @@ class Queen(Piece):
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            while not self.board_state.is_move_out_of_board(new_position):
+            while not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
@@ -236,6 +252,9 @@ class Queen(Piece):
                     yield new_position
                     new_position[0] += step[0]
                     new_position[1] += step[1]
+
+    def __str__(self):
+        return "wQ" if self.color == "white" else "bQ"
 
 
 class Rook(Piece):
@@ -247,7 +266,7 @@ class Rook(Piece):
     def pseudo_legal_moves(self):
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            while not self.board_state.is_move_out_of_board(new_position):
+            while not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
@@ -257,6 +276,9 @@ class Rook(Piece):
                     yield new_position
                     new_position[0] += step[0]
                     new_position[1] += step[1]
+
+    def __str__(self):
+        return "wR" if self.color == "white" else "bR"
 
 
 class Bishop(Piece):
@@ -267,7 +289,7 @@ class Bishop(Piece):
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            while not self.board_state.is_move_out_of_board(new_position):
+            while not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
@@ -278,6 +300,9 @@ class Bishop(Piece):
                     new_position[0] += step[0]
                     new_position[1] += step[1]
 
+    def __str__(self):
+        return "wB" if self.color == "white" else "bB"
+
 
 class Knight(Piece):
     def __init__(self, position, color, board_state):
@@ -287,13 +312,16 @@ class Knight(Piece):
     def pseudo_legal_moves(self):
         for step in ((-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1), (2, -1), (1, -2)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            if not self.board_state.is_move_out_of_board(new_position):
+            if not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
                         yield new_position
                 else:
                     yield new_position
+
+    def __str__(self):
+        return "wN" if self.color == "white" else "bN"
 
 
 class Pawn(Piece):
@@ -309,21 +337,25 @@ class Pawn(Piece):
             row_step = 1
 
         new_position = [self.position[0] + row_step, self.position[1]]
-        if not self.board_state.is_move_out_of_board(new_position):
+        if not ChessboardState.is_move_out_of_board(new_position):
             new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
             if new_position_piece is None:
                 yield new_position
 
                 new_position[0] += row_step
-                if not self.board_state.is_move_out_of_board(new_position) and self.first_move:
+                if not ChessboardState.is_move_out_of_board(new_position) and self.first_move:
                     new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                     if new_position_piece is None:
                         yield new_position
 
         for step in ((row_step, -1), (row_step, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
-            if not self.board_state.is_move_out_of_board(new_position):
+            if not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
                         yield new_position
+
+
+    def __str__(self):
+        return "wP" if self.color == "white" else "bP"
