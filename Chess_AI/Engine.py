@@ -42,14 +42,25 @@ class ChessboardState:
             king = self.black_king
             pawn_row_step = 1
 
+        for step in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
+            threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
+            if not ChessboardState.is_move_out_of_board(threat_position):
+                threat_position_piece = self.board[threat_position[0]][threat_position[1]]
+                if threat_position_piece is not None:
+                    if not king.is_same_color(threat_position_piece):
+                        if isinstance(threat_position_piece, King):
+                            self.board[old_position[0]][old_position[1]] = old_position_piece
+                            self.board[new_position[0]][new_position[1]] = new_position_piece
+                            old_position_piece.position = old_position
+                            return False
+
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
             while not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Rook) or isinstance(threat_position_piece, Queen) \
-                                or isinstance(threat_position_piece, King):
+                        if isinstance(threat_position_piece, Rook) or isinstance(threat_position_piece, Queen):
                             self.board[old_position[0]][old_position[1]] = old_position_piece
                             self.board[new_position[0]][new_position[1]] = new_position_piece
                             old_position_piece.position = old_position
@@ -65,8 +76,7 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Bishop) or isinstance(threat_position_piece, Queen) \
-                                or isinstance(threat_position_piece, King):
+                        if isinstance(threat_position_piece, Bishop) or isinstance(threat_position_piece, Queen):
                             self.board[old_position[0]][old_position[1]] = old_position_piece
                             self.board[new_position[0]][new_position[1]] = new_position_piece
                             old_position_piece.position = old_position
