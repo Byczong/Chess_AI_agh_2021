@@ -122,22 +122,22 @@ class ChessboardState:
 
         # move rook if castling
         if isinstance(piece, King) and abs(old_position[1] - new_position[1]) == 2:
-            if new_position == [7, 6]:
+            if new_position == (7, 6):
                 rook = self.board[7][7]
                 self.board[7][5] = rook
                 self.board[7][7] = None
                 rook.position = [7, 5]
-            elif new_position == [7, 2]:
+            elif new_position == (7, 2):
                 rook = self.board[7][0]
                 self.board[7][3] = rook
                 self.board[7][0] = None
                 rook.position = [7, 3]
-            elif new_position == [0, 6]:
+            elif new_position == (0, 6):
                 rook = self.board[0][7]
                 self.board[0][5] = rook
                 self.board[0][7] = None
                 rook.position = [0, 5]
-            elif new_position == [0, 2]:
+            elif new_position == (0, 2):
                 rook = self.board[0][0]
                 self.board[0][3] = rook
                 self.board[0][0] = None
@@ -178,13 +178,19 @@ class Piece:
                 yield move
 
     def get_legal_moves_list_including_color(self):
-        gen = self.legal_moves()
-        if self.board_state.white_to_move and self.color == "white":
-            return list(gen)
-        elif not self.board_state.white_to_move and self.color == "black":
-            return list(gen)
+        if (self.board_state.white_to_move and self.color == "white") \
+                or (not self.board_state.white_to_move and self.color == "black"):
+            legal_moves_list = []
+            for move in self.legal_moves():
+                new_move = move.copy()
+                legal_moves_list.append(new_move)
+            if len(legal_moves_list) == 0:
+                return None
+            return legal_moves_list
         else:  # Not this color's turn
             return None
+
+
 
     def pseudo_legal_moves(self):
         raise NotImplementedError("Method is not implemented")
@@ -355,7 +361,6 @@ class Pawn(Piece):
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece):
                         yield new_position
-
 
     def __str__(self):
         return "wP" if self.color == "white" else "bP"
