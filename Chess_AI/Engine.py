@@ -446,7 +446,7 @@ class Pawn(Piece):
             promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
         elif self.color == "black" and new_position[0] == 7:
-            promoted_pawn = Queen(new_position, self.color, self)
+            promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
 
         if self.first_move:
