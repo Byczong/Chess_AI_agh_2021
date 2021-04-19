@@ -1,5 +1,3 @@
-# Engine file - current chessboard state and valid moves
-
 class ChessboardState:
     def __init__(self):
         self.board = [[None] * 8 for _ in range(8)]
@@ -418,7 +416,8 @@ class Pawn(Piece):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
                     if not self.is_same_color(new_position_piece) and isinstance(new_position_piece, Pawn):
-                        if new_position_piece.last_move_number == self.board_state.move_counter and new_position_piece.moved_by_two:
+                        if new_position_piece.last_move_number == self.board_state.move_counter and \
+                                new_position_piece.moved_by_two:
                             new_position[0] += row_step
                             yield new_position
 
@@ -427,6 +426,8 @@ class Pawn(Piece):
         self.last_move_number = self.board_state.move_counter
         if abs(self.position[0] - new_position[0]) == 2:
             self.moved_by_two = True
+        else:
+            self.moved_by_two = False
 
         # en_passant
         if self.board_state.board[new_position[0]][new_position[1]] is None and \
