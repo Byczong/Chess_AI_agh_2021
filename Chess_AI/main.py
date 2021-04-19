@@ -16,7 +16,7 @@ FPS = 30
 
 COLOR_LIGHT = p.Color((255, 235, 205))
 COLOR_DARK = p.Color((140, 80, 42))
-HIGHLIGHT_COLOR = p.Color((218, 112, 214))
+COLOR_HIGHLIGHT = p.Color((218, 112, 214))
 
 BOARD_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8']
 BOARD_FILES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -63,7 +63,7 @@ def main():
                 if event.button == 1 and position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
                     mouse_row = position[1] // SQUARE_SIZE
                     mouse_col = position[0] // SQUARE_SIZE
-                    print(f"Clicked on ({mouse_row}, {mouse_col})")
+                    print(f"Clicked on {get_tile_str((mouse_row, mouse_col))}")
 
                     # Double click
                     if selected_tile == (mouse_row, mouse_col):
@@ -77,7 +77,7 @@ def main():
                             selected_piece = chessboard_state.board[mouse_row][mouse_col]
                             if selected_piece is not None:
                                 possible_moves = get_legal_moves_list(selected_piece)
-                                print(f"Possible moves: {possible_moves}")
+                                print_possible_moves(possible_moves)
                                 if possible_moves is None:
                                     reset_move_attempt()
                             else:
@@ -86,7 +86,9 @@ def main():
                         # Second position selected
                         elif len(tiles_clicked_on) == 2:
                             if list(selected_tile) in possible_moves:
-                                chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]].move(tiles_clicked_on[1])
+                                chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
+                                    .move(tiles_clicked_on[1])
+                                # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()
                             # First position selected v2
                             else:
@@ -94,7 +96,7 @@ def main():
                                 selected_piece = chessboard_state.board[mouse_row][mouse_col]
                                 if selected_piece is not None:
                                     possible_moves = get_legal_moves_list(selected_piece)
-                                    print(f"Possible moves: {possible_moves}")
+                                    print_possible_moves(possible_moves)
                                     if possible_moves is None:
                                         reset_move_attempt()
                                 else:
@@ -115,7 +117,7 @@ def load_pieces():
 """Show the game"""
 def draw_chessboard_state(chessboard_state, selected_tile, possible_moves):
     draw_chessboard()
-    highlight_possible_moves(selected_tile, possible_moves)
+    highlight_possible_moves(selected_tile, possible_moves, chessboard_state)
     draw_pieces(chessboard_state)
     # TODO: Highlight check
 
@@ -139,14 +141,22 @@ def draw_chessboard():
 
 
 """Highlight all the possible moves along with the selected tile"""
-def highlight_possible_moves(selected_tile, possible_moves):
+def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
     if selected_tile == ():
         return
-    tiles_to_highlight = possible_moves
-    tiles_to_highlight.append(list(selected_tile))
-    for pos in tiles_to_highlight:
-        p.draw.rect(SCREEN, HIGHLIGHT_COLOR,
-                    p.Rect(pos[1] * SQUARE_SIZE, pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+
+    p.draw.rect(SCREEN, COLOR_HIGHLIGHT,
+                p.Rect(selected_tile[1] * SQUARE_SIZE, selected_tile[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+
+    for pos in possible_moves:
+        if chessboard_state.board[pos[0]][pos[1]] is None:
+            p.draw.circle(SCREEN, COLOR_HIGHLIGHT,
+                          (pos[1] * SQUARE_SIZE + SQUARE_SIZE // 2, pos[0] * SQUARE_SIZE + SQUARE_SIZE // 2),
+                          SQUARE_SIZE // 5)
+        else:
+            p.draw.rect(SCREEN, COLOR_HIGHLIGHT,
+                        p.Rect(pos[1] * SQUARE_SIZE, pos[0] * SQUARE_SIZE, SQUARE_SIZE,
+                               SQUARE_SIZE))
 
 
 """Draw pieces on the board"""
@@ -174,9 +184,20 @@ def get_rank(n):
 def get_file(n):
     return BOARD_FILES[n]
 
+"""Get tile string from ChessboardState.board indices"""
+def get_tile_str(pos):
+    return get_file(pos[1]) + get_rank(pos[0])
+
 """Get tile's color from ChessboardState.board index"""
 def get_tile_color(row, column):
     return COLOR_LIGHT if (row + column) % 2 == 0 else COLOR_DARK
+
+"""Print possible moves"""
+def print_possible_moves(possible_moves):
+    if possible_moves is None:
+        print(f"No moves possible")
+    else:
+        print(f"Possible moves: {[get_tile_str(tuple(move)) for move in possible_moves]}")
 
 if __name__ == '__main__':
     main()
