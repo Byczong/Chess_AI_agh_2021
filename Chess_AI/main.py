@@ -88,6 +88,16 @@ def main():
                             if list(selected_tile) in possible_moves:
                                 chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
                                     .move(tiles_clicked_on[1])
+
+                                if (chessboard_state.game_state() == Engine.GameState.CHECK):
+                                        print("Check!")
+                                elif (chessboard_state.game_state() == Engine.GameState.CHECKMATE):
+                                    print("Checkmate!")
+                                elif (chessboard_state.game_state() == Engine.GameState.STALEMATE):
+                                    print("Stalemate!")
+                                elif (chessboard_state.game_state() == Engine.GameState.CONTINUE):
+                                    print("Continue!")
+
                                 # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()
                             # First position selected v2
@@ -172,7 +182,7 @@ def draw_pieces(chessboard_state):
 def get_legal_moves_list(piece):
     """Get list() of legal move generator (if color is wrong or piece is None return None)"""
     if piece is not None:
-        return piece.get_legal_moves_list_including_color()
+        return piece.get_legal_moves_list()
     else:
         return None
 
