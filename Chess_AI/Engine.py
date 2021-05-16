@@ -11,6 +11,7 @@ class PieceType:
 
 
 class ChessboardState:
+    # TODO: UNDO MOVES
     def __init__(self):
         self.board = [[None] * 8 for _ in range(8)]
         self.init_board()
@@ -671,3 +672,58 @@ class BoardEvaluation:
         else:
             return -evaluation
 
+
+class ChessAI:
+    def __init__(self, board_state):
+        self.board_state = board_state
+
+    def next_move(self, depth=3):
+        best_move = None
+        best_value = -99999
+        alpha = -100000
+        beta = 100000
+        for move in self.board_state.legal_moves_generator:
+            # do move
+            board_value = -self.alphabeta(-beta, -alpha, depth - 1)
+            if board_value > best_value:
+                best_value = board_value
+                best_move = move
+            if board_value > alpha:
+                alpha = board_value
+            # undo move
+        return best_move
+
+    def alphabeta(self, alpha, beta, depth):
+        best_score = -9999
+        if (depth == 0):
+            return self.quiescence_search(alpha, beta)
+
+        for move in self.board_state.legal_moves_generator:
+            # do move
+            score = -self.alphabeta(-beta, -alpha, depth - 1)
+            # undo move
+            if (score >= beta):
+                return score
+            if (score > best_score):
+                best_score = score
+            if (score > alpha):
+                alpha = score
+        return best_score
+
+    def quiescence_search(self, alpha, beta):
+        stand_pat = BoardEvaluation(self.board_state).evaluate()
+        if (stand_pat >= beta):
+            return beta
+        if (alpha < stand_pat):
+            alpha = stand_pat
+
+        for move in self.board_state.legal_moves_generator:
+            if self.board_state.is_capture(move):
+                # do move
+                score = -self.quiescence_search(-beta, -alpha)
+                # undo move
+        if (score >= beta):
+            return beta
+        if (score > alpha):
+            alpha = score
+        return alpha
