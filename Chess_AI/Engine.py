@@ -1,9 +1,13 @@
 class GameState:
-    CHECKMATE, STALEMATE, CHECK, CONTINUE = range(4)
+    CHECKMATE, STALEMATE, CHECK, CONTINUE, INSUFFICIENT_MATERIAL = range(5)
 
 
 class Color:
     WHITE, BLACK = range(2)
+
+
+class PieceType:
+    KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN = range(6)
 
 
 class ChessboardState:
@@ -34,9 +38,40 @@ class ChessboardState:
             for pawns_column in range(8):
                 self.board[pawns_row][pawns_column] = Pawn([pawns_row, pawns_column], color, self)
 
-    def game_state(self):
-        is_any_move_possible = self.is_any_move_possible()
+    def get_list_of_pieces(self, piece_type, color):
+        pieces = []
+        for row in range(8):
+            for column in range(8):
+                piece = self.board[row][column]
+                if piece is not None:
+                    if piece.color == color and piece.type == piece_type:
+                        pieces.append(piece)
+        return pieces
 
+    def get_current_color(self):
+        if self.white_to_move:
+            return Color.WHITE
+        else:
+            return Color.BLACK
+
+    def legal_moves_generator(self):
+        color = self.get_current_color()
+
+        for row in range(8):
+            for column in range(8):
+                piece = self.board[row][column]
+                if piece is not None:
+                    if piece.color == color:
+                        moves_list = piece.get_legal_moves_list()
+                        if moves_list is not None:
+                            for move in moves_list:
+                                yield move
+
+    def game_state(self):
+        if self.is_insufficient_material():
+            return GameState.INSUFFICIENT_MATERIAL
+
+        is_any_move_possible = self.is_any_move_possible()
         if not is_any_move_possible:
             if self.is_check():
                 return GameState.CHECKMATE
@@ -48,11 +83,7 @@ class ChessboardState:
             return GameState.CONTINUE
 
     def is_any_move_possible(self):
-        color = None
-        if self.white_to_move:
-            color = Color.WHITE
-        else:
-            color = Color.BLACK
+        color = self.get_current_color()
 
         for row in range(8):
             for column in range(8):
@@ -63,6 +94,14 @@ class ChessboardState:
                             return True
         return False
 
+    def is_insufficient_material(self):
+        for row in range(8):
+            for column in range(8):
+                piece = self.board[row][column]
+                if piece is not None:
+                    if piece.type != PieceType.KING:
+                        return False
+        return True
 
     def is_check(self):
         if self.white_to_move:
@@ -75,7 +114,6 @@ class ChessboardState:
                 return False
             else:
                 return True
-
 
     def is_move_valid(self, old_position, new_position):
         old_position_piece = self.board[old_position[0]][old_position[1]]
@@ -241,8 +279,8 @@ class Piece:
 class King(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = float('inf')
         self.first_move = True
+        self.type = PieceType.KING
 
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)):
@@ -325,7 +363,7 @@ class King(Piece):
 class Queen(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = 9
+        self.type = PieceType.QUEEN
 
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -348,8 +386,8 @@ class Queen(Piece):
 class Rook(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = 5
         self.first_move = True
+        self.type = PieceType.ROOK
 
     def pseudo_legal_moves(self):
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -387,7 +425,7 @@ class Rook(Piece):
 class Bishop(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = 3
+        self.type = PieceType.BISHOP
 
     def pseudo_legal_moves(self):
         for step in ((-1, -1), (-1, 1), (1, -1), (1, 1)):
@@ -410,7 +448,7 @@ class Bishop(Piece):
 class Knight(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = 3
+        self.type = PieceType.KNIGHT
 
     def pseudo_legal_moves(self):
         for step in ((-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1), (2, -1), (1, -2)):
@@ -430,10 +468,10 @@ class Knight(Piece):
 class Pawn(Piece):
     def __init__(self, position, color, board_state):
         super().__init__(position, color, board_state)
-        self.value = 1
         self.first_move = True
         self.last_move_number = None
         self.moved_by_two = False
+        self.type = PieceType.PAWN
 
     def pseudo_legal_moves(self):
         if self.color == Color.WHITE:
@@ -510,3 +548,126 @@ class Pawn(Piece):
 
     def __str__(self):
         return "wP" if self.color == Color.WHITE else "bP"
+
+
+class BoardEvaluation:
+    def __init__(self, board_state):
+        self.board_state = board_state
+        self.king_table = [[-30, -40, -40, -50, -50, -40, -40, -30],
+                           [-30, -40, -40, -50, -50, -40, -40, -30],
+                           [-30, -40, -40, -50, -50, -40, -40, -30],
+                           [-30, -40, -40, -50, -50, -40, -40, -30],
+                           [-20, -30, -30, -40, -40, -30, -30, -20],
+                           [-10, -20, -20, -20, -20, -20, -20, -10],
+                           [20, 20, 0, 0, 0, 0, 20, 20],
+                           [20, 30, 10, 0, 0, 10, 30, 20]
+                           ]
+        self.queen_table = [[-20, -10, -10, -5, -5, -10, -10, -20],
+                            [-10, 0, 0, 0, 0, 0, 0, -10],
+                            [-10, 0, 5, 5, 5, 5, 0, -10],
+                            [-5, 0, 5, 5, 5, 5, 0, -5],
+                            [0, 0, 5, 5, 5, 5, 0, -5],
+                            [-10, 5, 5, 5, 5, 5, 0, -10],
+                            [-10, 0, 0, 0, 0, 0, 0, -10],
+                            [-20, -10, -10, -5, -5, -10, -10, -20]
+                            ]
+        self.rook_table = [[0, 0, 0, 0, 0, 0, 0, 0],
+                           [5, 10, 10, 10, 10, 10, 10, 5],
+                           [-5, 0, 0, 0, 0, 0, 0, -5],
+                           [-5, 0, 0, 0, 0, 0, 0, -5],
+                           [-5, 0, 0, 0, 0, 0, 0, -5],
+                           [-5, 0, 0, 0, 0, 0, 0, -5],
+                           [-5, 0, 0, 0, 0, 0, 0, -5],
+                           [0, 0, 0, 5, 5, 0, 0, 0]
+                           ]
+        self.bishop_table = [[-20, -10, -10, -10, -10, -10, -10, -20],
+                             [-10, 0, 0, 0, 0, 0, 0, -10],
+                             [-10, 0, 5, 10, 10, 5, 0, -10],
+                             [-10, 5, 5, 10, 10, 5, 5, -10],
+                             [-10, 0, 10, 10, 10, 10, 0, -10],
+                             [-10, 10, 10, 10, 10, 10, 10, -10],
+                             [-10, 5, 0, 0, 0, 0, 5, -10],
+                             [-20, -10, -10, -10, -10, -10, -10, -20]
+                             ]
+        self.knight_table = [[-50, -40, -30, -30, -30, -30, -40, -50],
+                             [-40, -20, 0, 0, 0, 0, -20, -40],
+                             [-30, 0, 10, 15, 15, 10, 0, -30],
+                             [-30, 5, 15, 20, 20, 15, 5, -30],
+                             [-30, 0, 15, 20, 20, 15, 0, -30],
+                             [-30, 5, 10, 15, 15, 10, 5, -30],
+                             [-40, -20, 0, 5, 5, 0, -20, -40],
+                             [-50, -40, -30, -30, -30, -30, -40, -50]
+                             ]
+        self.pawn_table = [[0, 0, 0, 0, 0, 0, 0, 0],
+                           [50, 50, 50, 50, 50, 50, 50, 50],
+                           [10, 10, 20, 30, 30, 20, 10, 10],
+                           [5, 5, 10, 25, 25, 10, 5, 5],
+                           [0, 0, 0, 20, 20, 0, 0, 0],
+                           [5, -5, -10, 0, 0, -10, -5, 5],
+                           [5, 10, 10, -20, -20, 10, 10, 5],
+                           [0, 0, 0, 0, 0, 0, 0, 0]
+                           ]
+
+    def evaluate(self):
+        game_state = self.board_state.game_state()
+        if game_state == GameState.CHECKMATE:
+            if self.board_state.white_to_move:
+                return -9999
+            else:
+                return 9999
+        elif game_state == GameState.STALEMATE or game_state == GameState.INSUFFICIENT_MATERIAL:
+            return 0
+        else:
+            return self.evaluation_score()
+
+    def evaluation_score(self):
+        white_king_list = self.board_state.get_list_of_pieces(PieceType.KING, Color.WHITE)
+        black_king_list = self.board_state.get_list_of_pieces(PieceType.KING, Color.BLACK)
+
+        white_queen_list = self.board_state.get_list_of_pieces(PieceType.QUEEN, Color.WHITE)
+        black_queen_list = self.board_state.get_list_of_pieces(PieceType.QUEEN, Color.BLACK)
+
+        white_rook_list = self.board_state.get_list_of_pieces(PieceType.ROOK, Color.WHITE)
+        black_rook_list = self.board_state.get_list_of_pieces(PieceType.ROOK, Color.BLACK)
+
+        white_bishop_list = self.board_state.get_list_of_pieces(PieceType.BISHOP, Color.WHITE)
+        black_bishop_list = self.board_state.get_list_of_pieces(PieceType.BISHOP, Color.BLACK)
+
+        white_knight_list = self.board_state.get_list_of_pieces(PieceType.KNIGHT, Color.WHITE)
+        black_knight_list = self.board_state.get_list_of_pieces(PieceType.KNIGHT, Color.BLACK)
+
+        white_pawn_list = self.board_state.get_list_of_pieces(PieceType.PAWN, Color.WHITE)
+        black_pawn_list = self.board_state.get_list_of_pieces(PieceType.PAWN, Color.BLACK)
+
+        material_score = 100 * (len(white_pawn_list) - len(black_pawn_list)) \
+                         + 320 * (len(white_knight_list) - len(black_knight_list)) \
+                         + 330 * (len(white_bishop_list) - len(black_bishop_list)) \
+                         + 500 * (len(white_rook_list) - len(black_rook_list)) \
+                         + 900 * (len(white_queen_list) - len(black_queen_list))
+
+        king_position_score = sum([self.king_table[piece.position[0]][piece.position[1]] for piece in white_king_list])\
+                              + sum([-self.king_table[7 - piece.position[0]][piece.position[1]] for piece in black_king_list])
+
+        queen_position_score = sum([self.queen_table[piece.position[0]][piece.position[1]] for piece in white_queen_list])\
+                              + sum([-self.queen_table[7 - piece.position[0]][piece.position[1]] for piece in black_queen_list])
+
+        rook_position_score = sum([self.rook_table[piece.position[0]][piece.position[1]] for piece in white_rook_list])\
+                              + sum([-self.rook_table[7 - piece.position[0]][piece.position[1]] for piece in black_rook_list])
+
+        bishop_position_score = sum([self.bishop_table[piece.position[0]][piece.position[1]] for piece in white_bishop_list])\
+                              + sum([-self.bishop_table[7 - piece.position[0]][piece.position[1]] for piece in black_bishop_list])
+
+        knight_position_score = sum([self.knight_table[piece.position[0]][piece.position[1]] for piece in white_knight_list])\
+                              + sum([-self.knight_table[7 - piece.position[0]][piece.position[1]] for piece in black_knight_list])
+
+        pawn_position_score = sum([self.pawn_table[piece.position[0]][piece.position[1]] for piece in white_pawn_list])\
+                              + sum([-self.pawn_table[7 - piece.position[0]][piece.position[1]] for piece in black_pawn_list])
+
+
+        evaluation = material_score + king_position_score + queen_position_score + rook_position_score \
+                     + bishop_position_score + knight_position_score + pawn_position_score
+        if self.board_state.white_to_move:
+            return evaluation
+        else:
+            return -evaluation
+

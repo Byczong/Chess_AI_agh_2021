@@ -98,6 +98,7 @@ def main():
                                 elif (chessboard_state.game_state() == Engine.GameState.CONTINUE):
                                     print("Continue!")
 
+
                                 # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()
                             # First position selected v2
