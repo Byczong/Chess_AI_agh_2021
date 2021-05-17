@@ -149,14 +149,17 @@ def main():
                                 king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
                                     else chessboard_state.black_king.position
 
+                                print(f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} --> {get_tile_str(tiles_clicked_on[1])}")
                                 if chessboard_state.game_state() == Engine.GameState.CHECK:
-                                    print("Check!")
+                                    print("[GameState]: Check")
                                 elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
-                                    print("Checkmate!")
+                                    print("[GameState]: Checkmate")
                                 elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
-                                    print("Stalemate!")
+                                    print("[GameState]: Stalemate")
                                 elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
-                                    print("Continue!")
+                                    print("[GameState]: Continue")
+                                elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
+                                    print("[GameState]: Insufficient material")
 
                                 # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()
@@ -180,14 +183,17 @@ def main():
             chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
             draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
             p.display.flip()
+            print(f"[AIMove]: {get_tile_str(ai_move[0])} --> {get_tile_str(ai_move[1])}")
             if chessboard_state.game_state() == Engine.GameState.CHECK:
-                print("[AI]: Check!")
+                print("[GameState]: Check")
             elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
-                print("[AI]: Checkmate!")
+                print("[GameState]: Checkmate")
             elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
-                print("[AI]: Stalemate!")
+                print("[GameState]: Stalemate")
             elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
-                print("[AI]: Continue!")
+                print("[GameState]: Continue")
+            elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
+                print("[GameState]: Insufficient material")
 
 
 # Allow accessing a piece's image by PIECE['c#'], where c - color, # - abr. piece's name
