@@ -98,6 +98,9 @@ def main():
                                 elif (chessboard_state.game_state() == Engine.GameState.CONTINUE):
                                     print("Continue!")
 
+                                ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+                                chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
+
 
                                 # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()

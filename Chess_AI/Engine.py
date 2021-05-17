@@ -19,6 +19,7 @@ class ChessboardState:
         self.white_king = self.board[7][4]
         self.black_king = self.board[0][4]
         self.move_counter = 0
+        self.moves_history = []
 
     def init_board(self):
         for row in (0, 7):
@@ -65,8 +66,14 @@ class ChessboardState:
                     if piece.color == color:
                         moves_list = piece.get_legal_moves_list()
                         if moves_list is not None:
-                            for move in moves_list:
+                            for new_position in moves_list:
+                                move = (piece.position, new_position)
                                 yield move
+
+    def is_capture(self, move):
+        if self.board[move[1][0]][move[1][1]] is not None:
+            return True
+        return False
 
     def game_state(self):
         if self.is_insufficient_material():
@@ -261,6 +268,7 @@ class Piece:
         return legal_moves_list
 
     def move(self, new_position):
+        self.board_state.moves_history.append((self.position, new_position))
         self.board_state.move_counter += 1
         self.board_state.board[self.position[0]][self.position[1]] = None
         self.board_state.board[new_position[0]][new_position[1]] = self
@@ -317,6 +325,7 @@ class King(Piece):
                         yield [row, 2]
 
     def move(self, new_position):
+        self.board_state.moves_history.append((self.position, new_position))
         self.board_state.move_counter += 1
 
         if abs(self.position[1] - new_position[1]) == 2:
@@ -405,6 +414,7 @@ class Rook(Piece):
                     new_position[1] += step[1]
 
     def move(self, new_position):
+        self.board_state.moves_history.append((self.position, new_position))
         self.board_state.move_counter += 1
 
         self.board_state.board[self.position[0]][self.position[1]] = None
@@ -511,6 +521,7 @@ class Pawn(Piece):
                             yield new_position
 
     def move(self, new_position):
+        self.board_state.moves_history.append((self.position, new_position))
         self.board_state.move_counter += 1
         self.last_move_number = self.board_state.move_counter
         if abs(self.position[0] - new_position[0]) == 2:
@@ -552,8 +563,11 @@ class Pawn(Piece):
 
 
 class BoardEvaluation:
-    def __init__(self, board_state):
-        self.board_state = board_state
+    def __init__(self, moves_history):
+        self.board_state = ChessboardState()
+        for move in moves_history:
+            self.board_state.board[move[0][0]][move[0][1]].move(move[1])
+
         self.king_table = [[-30, -40, -40, -50, -50, -40, -40, -30],
                            [-30, -40, -40, -50, -50, -40, -40, -30],
                            [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -677,53 +691,78 @@ class ChessAI:
     def __init__(self, board_state):
         self.board_state = board_state
 
-    def next_move(self, depth=3):
+    def ai_move(self, depth=3):
+        board_state = self.board_state
         best_move = None
         best_value = -99999
         alpha = -100000
         beta = 100000
-        for move in self.board_state.legal_moves_generator:
-            # do move
+        for move in board_state.legal_moves_generator():
+
+            board_state_after_move = ChessboardState()
+            for history_move in board_state.moves_history:
+                board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
+            board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
+            self.board_state = board_state_after_move
+
             board_value = -self.alphabeta(-beta, -alpha, depth - 1)
             if board_value > best_value:
                 best_value = board_value
                 best_move = move
             if board_value > alpha:
                 alpha = board_value
-            # undo move
+
+            self.board_state = board_state
+
         return best_move
 
     def alphabeta(self, alpha, beta, depth):
+        board_state = self.board_state
         best_score = -9999
-        if (depth == 0):
+        if depth == 0:
             return self.quiescence_search(alpha, beta)
+        for move in board_state.legal_moves_generator():
 
-        for move in self.board_state.legal_moves_generator:
-            # do move
+            board_state_after_move = ChessboardState()
+            for history_move in board_state.moves_history:
+                board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
+            board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
+            self.board_state = board_state_after_move
+
             score = -self.alphabeta(-beta, -alpha, depth - 1)
-            # undo move
-            if (score >= beta):
+
+            self.board_state = board_state
+            if score >= beta:
                 return score
-            if (score > best_score):
+            if score > best_score:
                 best_score = score
-            if (score > alpha):
+            if score > alpha:
                 alpha = score
         return best_score
 
     def quiescence_search(self, alpha, beta):
-        stand_pat = BoardEvaluation(self.board_state).evaluate()
-        if (stand_pat >= beta):
+        board_state = self.board_state
+        evaluation = BoardEvaluation(board_state.moves_history).evaluate()
+        if evaluation >= beta:
             return beta
-        if (alpha < stand_pat):
-            alpha = stand_pat
+        if alpha < evaluation:
+            alpha = evaluation
 
-        for move in self.board_state.legal_moves_generator:
-            if self.board_state.is_capture(move):
-                # do move
+        for move in board_state.legal_moves_generator():
+            if board_state.is_capture(move):
+                board_state_after_move = ChessboardState()
+                for history_move in board_state.moves_history:
+                    board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
+                board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
+                self.board_state = board_state_after_move
+
                 score = -self.quiescence_search(-beta, -alpha)
-                # undo move
-        if (score >= beta):
-            return beta
-        if (score > alpha):
-            alpha = score
+
+                self.board_state = board_state
+
+                if score >= beta:
+                    return beta
+                if score > alpha:
+                    alpha = score
+
         return alpha
