@@ -13,10 +13,18 @@ SCREEN = p.display.set_mode((WIDTH, HEIGHT))
 SQUARE_SIZE = CHESSBOARD_HEIGHT // 8
 FPS = 30
 
+BUTTON_WIDTH, BUTTON_HEIGHT = WIDTH // 3, HEIGHT // 8
+BUTTONS_X = (WIDTH // 2 - BUTTON_WIDTH // 2, WIDTH // 2 + BUTTON_WIDTH // 2)
+BUTTON_1_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2, HEIGHT // 8 + BUTTON_HEIGHT // 2)
+BUTTON_2_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2 + HEIGHT // 4, HEIGHT // 8 + BUTTON_HEIGHT // 2 + HEIGHT // 4)
+BUTTON_3_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2 + HEIGHT // 2, HEIGHT // 8 + BUTTON_HEIGHT // 2 + HEIGHT // 2)
+BUTTON_4_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2 + 3 * HEIGHT // 4, HEIGHT // 8 + BUTTON_HEIGHT // 2 + 3 * HEIGHT // 4)
 
 COLOR_LIGHT = p.Color((255, 235, 205))
 COLOR_DARK = p.Color((140, 80, 42))
-COLOR_HIGHLIGHT = p.Color((218, 112, 214))
+COLOR_HIGHLIGHT = p.Color((53, 180, 159))
+COLOR_CHECK = p.Color((200, 40, 65))
+COLOR_STALEMATE = p.Color((50, 180, 57))
 
 BOARD_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8']
 BOARD_FILES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -28,12 +36,17 @@ def main():
     clock = p.time.Clock()
     SCREEN.fill(COLOR_DARK)
     load_pieces()
-    chessboard_state = Engine.ChessboardState()
     running = True
+    quit_after_loop = False
     selected_tile = ()
     selected_piece = None
     possible_moves = []
     tiles_clicked_on = []
+    king_pos = None
+    player_is_white = True
+
+    chessboard_state = Engine.ChessboardState()
+    play_against_ai = False
 
     def reset_move_attempt():
         nonlocal selected_tile, selected_piece, possible_moves, tiles_clicked_on
@@ -42,11 +55,55 @@ def main():
         selected_piece = None
         possible_moves = []
 
+    def init_game(is_fist_init):
+        nonlocal running, quit_after_loop, play_against_ai, position, player_is_white, chessboard_state
+        while running:
+            clock.tick(FPS)
+            for e in p.event.get():
+                if e.type == p.QUIT:
+                    quit_after_loop = True
+                    running = False
+                elif e.type == p.MOUSEBUTTONDOWN:
+                    if e.button == 1:
+                        position = p.mouse.get_pos()
+                        if BUTTONS_X[0] <= position[0] <= BUTTONS_X[1]:
+                            if BUTTON_1_Y[0] <= position[1] <= BUTTON_1_Y[1]:
+                                running = False
+                            elif BUTTON_2_Y[0] <= position[1] <= BUTTON_2_Y[1]:
+                                running = False
+                                play_against_ai = True
+                            elif BUTTON_3_Y[0] <= position[1] <= BUTTON_3_Y[1]:
+                                # TODO: Change color (along with the orientation - white/black on the bottom)
+                                player_is_white = True
+                            elif BUTTON_4_Y[0] <= position[1] <= BUTTON_4_Y[1]:
+                                quit_after_loop = True
+                                running = False
+            draw_init_window()
+            p.display.flip()
+
+        if quit_after_loop and is_fist_init:
+            p.quit()
+        elif quit_after_loop:
+            running = False
+        else:
+            running = True
+            SCREEN.fill(COLOR_DARK)
+            chessboard_state = Engine.ChessboardState()
+
+    # Initial window
+    init_game(True)
+
+    # Main window
     while running:
         clock.tick(FPS)
         for event in p.event.get():
             if event.type == p.QUIT:
                 running = False
+            elif event.type == p.KEYDOWN:
+                if event.key == p.K_ESCAPE:
+                    print("------------")
+                    print("Go back to the menu")
+                    init_game(False)
             elif event.type == p.MOUSEBUTTONDOWN:
                 position = p.mouse.get_pos()
 
@@ -89,18 +146,17 @@ def main():
                                 chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
                                     .move(tiles_clicked_on[1])
 
-                                if (chessboard_state.game_state() == Engine.GameState.CHECK):
-                                        print("Check!")
-                                elif (chessboard_state.game_state() == Engine.GameState.CHECKMATE):
+                                king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
+                                    else chessboard_state.black_king.position
+
+                                if chessboard_state.game_state() == Engine.GameState.CHECK:
+                                    print("Check!")
+                                elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
                                     print("Checkmate!")
-                                elif (chessboard_state.game_state() == Engine.GameState.STALEMATE):
+                                elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
                                     print("Stalemate!")
-                                elif (chessboard_state.game_state() == Engine.GameState.CONTINUE):
+                                elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
                                     print("Continue!")
-
-                                ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
-                                chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
-
 
                                 # TODO: Cool sound when taking pieces, less cool when not
                                 reset_move_attempt()
@@ -116,8 +172,22 @@ def main():
                                 else:
                                     reset_move_attempt()
 
-        draw_chessboard_state(chessboard_state, selected_tile, possible_moves)
+        draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
         p.display.flip()
+
+        if play_against_ai and (player_is_white and not chessboard_state.white_to_move):
+            ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+            chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
+            draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
+            p.display.flip()
+            if chessboard_state.game_state() == Engine.GameState.CHECK:
+                print("[AI]: Check!")
+            elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+                print("[AI]: Checkmate!")
+            elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+                print("[AI]: Stalemate!")
+            elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
+                print("[AI]: Continue!")
 
 
 # Allow accessing a piece's image by PIECE['c#'], where c - color, # - abr. piece's name
@@ -128,16 +198,17 @@ def load_pieces():
         PIECES[piece] = p.transform.scale(p.image.load("pieces/" + piece + ".png"), (SQUARE_SIZE, SQUARE_SIZE))
 
 
-def draw_chessboard_state(chessboard_state, selected_tile, possible_moves):
+def draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos):
     """Show the game"""
     draw_chessboard()
+    if king_pos is not None:
+        highlight_king(chessboard_state, king_pos)
     highlight_possible_moves(selected_tile, possible_moves, chessboard_state)
     draw_pieces(chessboard_state)
-    # TODO: Highlight check
 
 
 def draw_chessboard():
-    """Draw the squares on the board along with the border describing ranks and files"""
+    """Draw the tiles on the board along with the border describing ranks and files"""
     for row in range(8):
         for col in range(8):
             p.draw.rect(SCREEN, get_tile_color(row, col),
@@ -173,6 +244,27 @@ def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
                                SQUARE_SIZE))
 
 
+def highlight_king(chessboard_state, king_pos):
+    """Highlight appropriate king that is being checked, checkmated or stalemated"""
+    if chessboard_state.game_state() == Engine.GameState.CHECK:
+        p.draw.rect(SCREEN, COLOR_CHECK,
+                    p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+        p.draw.circle(SCREEN, get_tile_color(king_pos[0], king_pos[1]),
+                      (king_pos[1] * SQUARE_SIZE + SQUARE_SIZE // 2, king_pos[0] * SQUARE_SIZE + SQUARE_SIZE // 2),
+                      SQUARE_SIZE // 2)
+
+    elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+        p.draw.rect(SCREEN, COLOR_CHECK,
+                    p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+
+    elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+        p.draw.rect(SCREEN, COLOR_STALEMATE,
+                    p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+        p.draw.circle(SCREEN, get_tile_color(king_pos[0], king_pos[1]),
+                      (king_pos[1] * SQUARE_SIZE + SQUARE_SIZE // 2, king_pos[0] * SQUARE_SIZE + SQUARE_SIZE // 2),
+                      SQUARE_SIZE // 2)
+
+
 def draw_pieces(chessboard_state):
     """Draw pieces on the board"""
     for row in range(8):
@@ -183,6 +275,30 @@ def draw_pieces(chessboard_state):
                             p.Rect(col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
 
 
+def draw_init_window():
+    """Draw initial window with buttons"""
+    SCREEN.fill(COLOR_LIGHT)
+    texts = ["Play alone", "Play against AI", "Change color", "Quit"]
+    font = p.font.SysFont("monospace", 18)
+    labels = [font.render(text, True, COLOR_LIGHT) for text in texts]
+    labels_rects = [labels[0].get_rect(center=(WIDTH // 2, HEIGHT / 8)),
+                    labels[1].get_rect(center=(WIDTH // 2, 3 * HEIGHT / 8)),
+                    labels[2].get_rect(center=(WIDTH // 2, 5 * HEIGHT / 8)),
+                    labels[3].get_rect(center=(WIDTH // 2, 7 * HEIGHT / 8))]
+
+    p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_1_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
+    SCREEN.blit(labels[0], labels_rects[0])
+
+    p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_2_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
+    SCREEN.blit(labels[1], labels_rects[1])
+
+    p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_3_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
+    SCREEN.blit(labels[2], labels_rects[2])
+
+    p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_4_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
+    SCREEN.blit(labels[3], labels_rects[3])
+
+
 def get_legal_moves_list(piece):
     """Get list() of legal move generator (if color is wrong or piece is None return None)"""
     if piece is not None:
@@ -190,21 +306,26 @@ def get_legal_moves_list(piece):
     else:
         return None
 
+
 def get_rank(n):
     """Get rank string from ChessboardState.board index"""
     return BOARD_RANKS[7 - n]
+
 
 def get_file(n):
     """Get file string from ChessboardState.board index"""
     return BOARD_FILES[n]
 
+
 def get_tile_str(pos):
     """Get tile string from ChessboardState.board indices"""
     return get_file(pos[1]) + get_rank(pos[0])
 
+
 def get_tile_color(row, column):
     """Get tile's color from ChessboardState.board index"""
     return COLOR_LIGHT if (row + column) % 2 == 0 else COLOR_DARK
+
 
 def print_possible_moves(possible_moves):
     """Print possible moves"""
@@ -212,6 +333,7 @@ def print_possible_moves(possible_moves):
         print(f"No moves possible")
     else:
         print(f"Possible moves: {[get_tile_str(tuple(move)) for move in possible_moves]}")
+
 
 if __name__ == '__main__':
     main()
