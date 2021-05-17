@@ -637,48 +637,38 @@ class BoardEvaluation:
             return self.evaluation_score()
 
     def evaluation_score(self):
-        white_king_list = self.board_state.get_list_of_pieces(PieceType.KING, Color.WHITE)
-        black_king_list = self.board_state.get_list_of_pieces(PieceType.KING, Color.BLACK)
+        pieces_lists = [None] * 6
+        for i in range(6):
+            pieces_lists[i] = [[], []]
+        for row in range(8):
+            for column in range(8):
+                piece = self.board_state.board[row][column]
+                if piece is not None:
+                    pieces_lists[piece.type][piece.color].append(piece)
 
-        white_queen_list = self.board_state.get_list_of_pieces(PieceType.QUEEN, Color.WHITE)
-        black_queen_list = self.board_state.get_list_of_pieces(PieceType.QUEEN, Color.BLACK)
+        material_score = 100 * (len(pieces_lists[PieceType.PAWN][Color.WHITE]) - len(pieces_lists[PieceType.PAWN][Color.BLACK])) \
+                         + 320 * (len(pieces_lists[PieceType.KNIGHT][Color.WHITE]) - len(pieces_lists[PieceType.KNIGHT][Color.BLACK])) \
+                         + 330 * (len(pieces_lists[PieceType.BISHOP][Color.WHITE]) - len(pieces_lists[PieceType.BISHOP][Color.BLACK])) \
+                         + 500 * (len(pieces_lists[PieceType.ROOK][Color.WHITE]) - len(pieces_lists[PieceType.ROOK][Color.BLACK])) \
+                         + 900 * (len(pieces_lists[PieceType.QUEEN][Color.WHITE]) - len(pieces_lists[PieceType.QUEEN][Color.BLACK]))
 
-        white_rook_list = self.board_state.get_list_of_pieces(PieceType.ROOK, Color.WHITE)
-        black_rook_list = self.board_state.get_list_of_pieces(PieceType.ROOK, Color.BLACK)
+        king_position_score = sum([self.king_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.WHITE]])\
+                              + sum([-self.king_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.BLACK]])
 
-        white_bishop_list = self.board_state.get_list_of_pieces(PieceType.BISHOP, Color.WHITE)
-        black_bishop_list = self.board_state.get_list_of_pieces(PieceType.BISHOP, Color.BLACK)
+        queen_position_score = sum([self.queen_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.QUEEN][Color.WHITE]])\
+                              + sum([-self.queen_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.QUEEN][Color.BLACK]])
 
-        white_knight_list = self.board_state.get_list_of_pieces(PieceType.KNIGHT, Color.WHITE)
-        black_knight_list = self.board_state.get_list_of_pieces(PieceType.KNIGHT, Color.BLACK)
+        rook_position_score = sum([self.rook_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.ROOK][Color.WHITE]])\
+                              + sum([-self.rook_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.ROOK][Color.BLACK]])
 
-        white_pawn_list = self.board_state.get_list_of_pieces(PieceType.PAWN, Color.WHITE)
-        black_pawn_list = self.board_state.get_list_of_pieces(PieceType.PAWN, Color.BLACK)
+        bishop_position_score = sum([self.bishop_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.BISHOP][Color.WHITE]])\
+                              + sum([-self.bishop_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.BLACK]])
 
-        material_score = 100 * (len(white_pawn_list) - len(black_pawn_list)) \
-                         + 320 * (len(white_knight_list) - len(black_knight_list)) \
-                         + 330 * (len(white_bishop_list) - len(black_bishop_list)) \
-                         + 500 * (len(white_rook_list) - len(black_rook_list)) \
-                         + 900 * (len(white_queen_list) - len(black_queen_list))
+        knight_position_score = sum([self.knight_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KNIGHT][Color.WHITE]])\
+                              + sum([-self.knight_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KNIGHT][Color.BLACK]])
 
-        king_position_score = sum([self.king_table[piece.position[0]][piece.position[1]] for piece in white_king_list])\
-                              + sum([-self.king_table[7 - piece.position[0]][piece.position[1]] for piece in black_king_list])
-
-        queen_position_score = sum([self.queen_table[piece.position[0]][piece.position[1]] for piece in white_queen_list])\
-                              + sum([-self.queen_table[7 - piece.position[0]][piece.position[1]] for piece in black_queen_list])
-
-        rook_position_score = sum([self.rook_table[piece.position[0]][piece.position[1]] for piece in white_rook_list])\
-                              + sum([-self.rook_table[7 - piece.position[0]][piece.position[1]] for piece in black_rook_list])
-
-        bishop_position_score = sum([self.bishop_table[piece.position[0]][piece.position[1]] for piece in white_bishop_list])\
-                              + sum([-self.bishop_table[7 - piece.position[0]][piece.position[1]] for piece in black_bishop_list])
-
-        knight_position_score = sum([self.knight_table[piece.position[0]][piece.position[1]] for piece in white_knight_list])\
-                              + sum([-self.knight_table[7 - piece.position[0]][piece.position[1]] for piece in black_knight_list])
-
-        pawn_position_score = sum([self.pawn_table[piece.position[0]][piece.position[1]] for piece in white_pawn_list])\
-                              + sum([-self.pawn_table[7 - piece.position[0]][piece.position[1]] for piece in black_pawn_list])
-
+        pawn_position_score = sum([self.pawn_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.PAWN][Color.WHITE]])\
+                              + sum([-self.pawn_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.PAWN][Color.BLACK]])
 
         evaluation = material_score + king_position_score + queen_position_score + rook_position_score \
                      + bishop_position_score + knight_position_score + pawn_position_score
