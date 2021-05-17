@@ -181,6 +181,8 @@ def main():
         if play_against_ai and (player_is_white and not chessboard_state.white_to_move):
             ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
             chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
+            king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
+                else chessboard_state.black_king.position
             draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
             p.display.flip()
 
