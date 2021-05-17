@@ -183,6 +183,7 @@ def main():
             chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
             draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
             p.display.flip()
+
             print(f"[AIMove]: {get_tile_str(ai_move[0])} --> {get_tile_str(ai_move[1])}")
             if chessboard_state.game_state() == Engine.GameState.CHECK:
                 print("[GameState]: Check")
