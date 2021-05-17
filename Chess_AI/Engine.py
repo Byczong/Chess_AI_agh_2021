@@ -73,6 +73,9 @@ class ChessboardState:
     def is_capture(self, move):
         if self.board[move[1][0]][move[1][1]] is not None:
             return True
+        if self.board[move[0][0]][move[0][1]].type == PieceType.PAWN and self.board[move[1][0]][move[1][1]] is None and\
+                abs(move[1][1] - move[0][1]) == 1:
+            return True
         return False
 
     def game_state(self):
@@ -563,10 +566,8 @@ class Pawn(Piece):
 
 
 class BoardEvaluation:
-    def __init__(self, moves_history):
-        self.board_state = ChessboardState()
-        for move in moves_history:
-            self.board_state.board[move[0][0]][move[0][1]].move(move[1])
+    def __init__(self, board_state):
+        self.board_state = board_state
 
         self.king_table = [[-30, -40, -40, -50, -50, -40, -40, -30],
                            [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -742,7 +743,7 @@ class ChessAI:
 
     def quiescence_search(self, alpha, beta):
         board_state = self.board_state
-        evaluation = BoardEvaluation(board_state.moves_history).evaluate()
+        evaluation = BoardEvaluation(board_state).evaluate()
         if evaluation >= beta:
             return beta
         if alpha < evaluation:
@@ -750,6 +751,7 @@ class ChessAI:
 
         for move in board_state.legal_moves_generator():
             if board_state.is_capture(move):
+
                 board_state_after_move = ChessboardState()
                 for history_move in board_state.moves_history:
                     board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
