@@ -106,7 +106,7 @@ def main():
 
     def make_ai_move():
         nonlocal chessboard_state, king_pos
-        ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+        ai_move = Engine.ChessAI(chessboard_state).ai_move()
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
         king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
             else chessboard_state.black_king.position
@@ -155,7 +155,7 @@ def main():
                 # Middle click
                 elif event.button == 2:
                     reset_move_attempt()
-                    # TODO: Undo the last move
+                    chessboard_state.undo_move()
 
                 # Left click
                 if event.button == 1 and position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
@@ -164,10 +164,10 @@ def main():
                     print(f"Clicked on {get_tile_str((mouse_row, mouse_col))}")
 
                     # Double click
-                    if selected_tile == (mouse_row, mouse_col):
+                    if selected_tile == [mouse_row, mouse_col]:
                         reset_move_attempt()
                     else:
-                        selected_tile = (mouse_row, mouse_col)
+                        selected_tile = [mouse_row, mouse_col]
                         tiles_clicked_on.append(selected_tile)
 
                         # First position selected v1
