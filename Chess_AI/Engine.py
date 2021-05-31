@@ -122,6 +122,13 @@ class ChessboardState:
                 return True
 
     def is_move_valid(self, old_position, new_position):
+        def undo(en_passant):
+            self.board[old_position[0]][old_position[1]] = old_position_piece
+            self.board[new_position[0]][new_position[1]] = new_position_piece
+            old_position_piece.position = old_position
+            if en_passant:
+                self.board[pawn.position[0]][pawn.position[1]] = pawn
+
         old_position_piece = self.board[old_position[0]][old_position[1]]
         new_position_piece = self.board[new_position[0]][new_position[1]]
 
@@ -138,7 +145,7 @@ class ChessboardState:
 
         en_passant = False
         pawn = None
-        if isinstance(old_position_piece, Pawn) and new_position_piece is None and \
+        if old_position_piece.type == PieceType.PAWN and new_position_piece is None and \
                 abs(new_position[1] - old_position[1]) == 1:
             pawn = self.board[new_position[0] - pawn_row_step][new_position[1]]
             self.board[new_position[0] - pawn_row_step][new_position[1]] = None
@@ -150,12 +157,8 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, King):
-                            self.board[old_position[0]][old_position[1]] = old_position_piece
-                            self.board[new_position[0]][new_position[1]] = new_position_piece
-                            old_position_piece.position = old_position
-                            if en_passant:
-                                self.board[pawn.position[0]][pawn.position[1]] = pawn
+                        if threat_position_piece.type == PieceType.KING:
+                            undo(en_passant)
                             return False
 
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -164,12 +167,8 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Rook) or isinstance(threat_position_piece, Queen):
-                            self.board[old_position[0]][old_position[1]] = old_position_piece
-                            self.board[new_position[0]][new_position[1]] = new_position_piece
-                            old_position_piece.position = old_position
-                            if en_passant:
-                                self.board[pawn.position[0]][pawn.position[1]] = pawn
+                        if threat_position_piece.type == PieceType.ROOK or threat_position_piece.type == PieceType.QUEEN:
+                            undo(en_passant)
                             return False
                     break
                 else:
@@ -182,12 +181,8 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Bishop) or isinstance(threat_position_piece, Queen):
-                            self.board[old_position[0]][old_position[1]] = old_position_piece
-                            self.board[new_position[0]][new_position[1]] = new_position_piece
-                            old_position_piece.position = old_position
-                            if en_passant:
-                                self.board[pawn.position[0]][pawn.position[1]] = pawn
+                        if threat_position_piece.type == PieceType.BISHOP or threat_position_piece.type == PieceType.QUEEN:
+                            undo(en_passant)
                             return False
                     break
                 else:
@@ -200,12 +195,8 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Knight):
-                            self.board[old_position[0]][old_position[1]] = old_position_piece
-                            self.board[new_position[0]][new_position[1]] = new_position_piece
-                            old_position_piece.position = old_position
-                            if en_passant:
-                                self.board[pawn.position[0]][pawn.position[1]] = pawn
+                        if threat_position_piece.type == PieceType.KNIGHT:
+                            undo(en_passant)
                             return False
 
         for step in ((pawn_row_step, -1), (pawn_row_step, 1)):
@@ -214,20 +205,13 @@ class ChessboardState:
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
                     if not king.is_same_color(threat_position_piece):
-                        if isinstance(threat_position_piece, Pawn):
-                            self.board[old_position[0]][old_position[1]] = old_position_piece
-                            self.board[new_position[0]][new_position[1]] = new_position_piece
-                            old_position_piece.position = old_position
-                            if en_passant:
-                                self.board[pawn.position[0]][pawn.position[1]] = pawn
+                        if threat_position_piece.type == PieceType.PAWN:
+                            undo(en_passant)
                             return False
 
-        self.board[old_position[0]][old_position[1]] = old_position_piece
-        self.board[new_position[0]][new_position[1]] = new_position_piece
-        old_position_piece.position = old_position
-        if en_passant:
-            self.board[pawn.position[0]][pawn.position[1]] = pawn
+        undo(en_passant)
         return True
+
 
     def undo_move(self):
         if len(self.moves_history) == 0:
@@ -267,13 +251,20 @@ class ChessboardState:
         else:
             self.white_to_move = True
 
-
     @staticmethod
     def is_move_out_of_board(position):
         if 7 >= position[0] >= 0 and 7 >= position[1] >= 0:
             return False
         else:
             return True
+
+
+class Move:
+    def __init__(self, start_position, end_position, moved_piece, captured_piece):
+        self.start_position = start_position
+        self.end_position = end_position
+        self.moved_piece = moved_piece
+        self.captured_piece = captured_piece
 
 
 class Piece:
@@ -345,7 +336,7 @@ class King(Piece):
             row = 0
         piece = self.board_state.board[row][7]
         if self.first_move and piece is not None:
-            if isinstance(piece, Rook):
+            if piece.type == PieceType.ROOK:
                 if piece.first_move and self.board_state.board[row][5] is None and \
                         self.board_state.board[row][6] is None:
                     if self.board_state.is_move_valid([row, 4], [row, 5]) and \
@@ -354,7 +345,7 @@ class King(Piece):
 
         piece = self.board_state.board[row][0]
         if self.first_move and piece is not None:
-            if isinstance(piece, Rook):
+            if piece.type == PieceType.ROOK:
                 if piece.first_move and self.board_state.board[row][3] is None and \
                         self.board_state.board[row][2] is None and self.board_state.board[row][1] is None:
                     if self.board_state.is_move_valid([row, 4], [row, 3]) and \
@@ -597,7 +588,7 @@ class Pawn(Piece):
             if not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                 if new_position_piece is not None:
-                    if not self.is_same_color(new_position_piece) and isinstance(new_position_piece, Pawn):
+                    if not self.is_same_color(new_position_piece) and new_position_piece.type == PieceType.PAWN:
                         if new_position_piece.last_move_number == self.board_state.move_counter and \
                                 new_position_piece.moved_by_two:
                             new_position[0] += row_step
@@ -793,39 +784,39 @@ class BoardEvaluation:
 class ChessAI:
     def __init__(self, board_state):
         self.board_state = board_state
-        self.evaluator = BoardEvaluation(self.board_state)
+        self.evaluator = BoardEvaluation(board_state)
 
     def ai_move(self, depth=3):
         best_move = None
-        best_value = -99999
+        best_board_evaluation = -99999
         alpha = -100000
         beta = 100000
         for move in self.board_state.legal_moves():
             self.board_state.board[move[0][0]][move[0][1]].move(move[1])
-            board_value = -self.alphabeta(-beta, -alpha, depth - 1)
-            if board_value > best_value:
-                best_value = board_value
+            board_evaluation = -self.alphabeta(-beta, -alpha, depth - 1)
+            if board_evaluation > best_board_evaluation:
+                best_board_evaluation = board_evaluation
                 best_move = move
-            if board_value > alpha:
-                alpha = board_value
+            if board_evaluation > alpha:
+                alpha = board_evaluation
             self.board_state.undo_move()
         return best_move
 
     def alphabeta(self, alpha, beta, depth):
-        best_score = -99999
+        best_board_evaluation = -99999
         if depth == 0:
             return self.quiescence_search(alpha, beta)
         for move in self.board_state.legal_moves():
             self.board_state.board[move[0][0]][move[0][1]].move(move[1])
-            score = -self.alphabeta(-beta, -alpha, depth - 1)
+            board_evaluation = -self.alphabeta(-beta, -alpha, depth - 1)
             self.board_state.undo_move()
-            if score >= beta:
-                return score
-            if score > best_score:
-                best_score = score
-            if score > alpha:
-                alpha = score
-        return best_score
+            if board_evaluation >= beta:
+                return board_evaluation
+            if board_evaluation > best_board_evaluation:
+                best_board_evaluation = board_evaluation
+            if board_evaluation > alpha:
+                alpha = board_evaluation
+        return best_board_evaluation
 
     def quiescence_search(self, alpha, beta):
         evaluation = self.evaluator.evaluate()
@@ -843,11 +834,3 @@ class ChessAI:
                 if score > alpha:
                     alpha = score
         return alpha
-
-
-class Move:
-    def __init__(self, start_position, end_position, moved_piece, captured_piece):
-        self.start_position = start_position
-        self.end_position = end_position
-        self.moved_piece = moved_piece
-        self.captured_piece = captured_piece
