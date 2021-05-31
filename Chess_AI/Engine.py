@@ -602,21 +602,7 @@ class Pawn(Piece):
 
         pawn_promotion = False
         # pawn promotion
-        if self.color == Color.WHITE and new_position[0] == 0:
-            pawn_promotion = True
-            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
-                                                       self.board_state.board[new_position[0]][new_position[1]]))
-            promoted_pawn = None
-            if promotion_choice is Knight:
-                promoted_pawn = Knight(new_position, self.color, self.board_state)
-            elif promotion_choice is Rook:
-                promoted_pawn = Rook(new_position, self.color, self.board_state)
-            elif promotion_choice is Bishop:
-                promoted_pawn = Bishop(new_position, self.color, self.board_state)
-            else:
-                promoted_pawn = Queen(new_position, self.color, self.board_state)
-            self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
-        elif self.color == Color.BLACK and new_position[0] == 7:
+        if self.color == Color.WHITE and new_position[0] == 0 or self.color == Color.BLACK and new_position[0] == 7:
             pawn_promotion = True
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
                                                        self.board_state.board[new_position[0]][new_position[1]]))
