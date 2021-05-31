@@ -30,6 +30,9 @@ RECT_GAME_END_WIDTH, RECT_GAME_END_HEIGHT = WIDTH // 2, HEIGHT // 2
 RECT_GAME_END_X = (WIDTH // 4, WIDTH // 4 + RECT_GAME_END_WIDTH)
 RECT_GAME_END_Y = (HEIGHT // 4, HEIGHT // 4 + RECT_GAME_END_HEIGHT)
 
+BUTTON_CLOSE_POPUP_X = (WIDTH // 2 - BUTTON_WIDTH // 2, WIDTH // 2 + BUTTON_WIDTH // 2)
+BUTTON_CLOSE_POPUP_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2 + HEIGHT // 2, HEIGHT // 8 + BUTTON_HEIGHT // 2 + HEIGHT // 2)
+
 COLOR_LIGHT = p.Color((255, 235, 205))
 COLOR_DARK = p.Color((140, 80, 42))
 COLOR_HIGHLIGHT = p.Color((53, 180, 159))
@@ -49,27 +52,30 @@ def main():
     load_pieces()
     running = True
     quit_after_loop = False
-    selected_tile = ()
+    selected_tile = None
     selected_piece = None
     possible_moves = []
     tiles_clicked_on = []
     king_pos = None
     player_is_white = True
     first_white_ai_move_made = False
+    view_ending_box = False
+    white_won = None
+    end_state = None
 
     chessboard_state = Engine.ChessboardState()
     play_against_ai = False
 
     def reset_move_attempt():
         nonlocal selected_tile, selected_piece, possible_moves, tiles_clicked_on
-        selected_tile = ()
+        selected_tile = None
         tiles_clicked_on = []
         selected_piece = None
         possible_moves = []
 
     def init_game(is_fist_init):
-        nonlocal running, quit_after_loop, play_against_ai, position, \
-            player_is_white, chessboard_state, first_white_ai_move_made
+        nonlocal running, quit_after_loop, play_against_ai, position, view_ending_box, white_won, \
+            player_is_white, chessboard_state, first_white_ai_move_made, selected_tile, end_state
         while running:
             clock.tick(FPS)
             for e in p.event.get():
@@ -102,11 +108,15 @@ def main():
             running = True
             SCREEN.fill(COLOR_DARK)
             first_white_ai_move_made = False
+            selected_tile = None
+            view_ending_box = False
+            white_won = None
+            end_state = None
             chessboard_state = Engine.ChessboardState()
 
     def make_ai_move():
-        nonlocal chessboard_state, king_pos
-        ai_move = Engine.ChessAI(chessboard_state).ai_move()
+        nonlocal chessboard_state, king_pos, view_ending_box, white_won, end_state
+        ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
         king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
             else chessboard_state.black_king.position
@@ -118,12 +128,21 @@ def main():
             print("[GameState]: Check")
         elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
             print("[GameState]: Checkmate")
+            view_ending_box = True
+            white_won = not chessboard_state.white_to_move
+            end_state = Engine.GameState.CHECKMATE
         elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
             print("[GameState]: Stalemate")
+            view_ending_box = True
+            white_won = None
+            end_state = Engine.GameState.STALEMATE
         elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
             print("[GameState]: Continue")
         elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
             print("[GameState]: Insufficient material")
+            view_ending_box = True
+            white_won = None
+            end_state = Engine.GameState.INSUFFICIENT_MATERIAL
 
     # Initial window
     init_game(True)
@@ -149,16 +168,32 @@ def main():
                 position = p.mouse.get_pos()
 
                 # Right click
-                if event.button == 3:
+                if not view_ending_box and event.button == 3:
                     reset_move_attempt()
 
                 # Middle click
-                elif event.button == 2:
+                elif not view_ending_box and event.button == 2:
                     reset_move_attempt()
-                    chessboard_state.undo_move()
+                    # Undo move (or 2 moves if playing against AI)
+                    if play_against_ai:
+                        chessboard_state.undo_move()
+                        chessboard_state.undo_move()
+                    else:
+                        chessboard_state.undo_move()
+
+                # Popup left click
+                if view_ending_box:
+                    if event.button == 1:
+                        if BUTTON_CLOSE_POPUP_X[0] <= position[0] <= BUTTON_CLOSE_POPUP_X[1]:
+                            if BUTTON_CLOSE_POPUP_Y[0] <= position[1] <= BUTTON_CLOSE_POPUP_Y[1]:
+                                # Close popup
+                                view_ending_box = False
+                                white_won = None
+                                end_state = None
 
                 # Left click
-                if event.button == 1 and position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
+                if not view_ending_box and event.button == 1 and \
+                        position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
                     mouse_row = position[1] // SQUARE_SIZE
                     mouse_col = position[0] // SQUARE_SIZE
                     print(f"Clicked on {get_tile_str((mouse_row, mouse_col))}")
@@ -183,7 +218,7 @@ def main():
 
                         # Second position selected
                         elif len(tiles_clicked_on) == 2:
-                            if list(selected_tile) in possible_moves:
+                            if selected_tile in possible_moves:
                                 chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
                                     .move(tiles_clicked_on[1])
 
@@ -191,18 +226,27 @@ def main():
                                     else chessboard_state.black_king.position
 
                                 print(
-                                    f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} --> {get_tile_str(tiles_clicked_on[1])}")
+                                    f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} -->"
+                                    f" {get_tile_str(tiles_clicked_on[1])}")
                                 if chessboard_state.game_state() == Engine.GameState.CHECK:
                                     print("[GameState]: Check")
                                 elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
                                     print("[GameState]: Checkmate")
+                                    view_ending_box = True
+                                    white_won = not chessboard_state.white_to_move
+                                    end_state = Engine.GameState.CHECKMATE
                                 elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
                                     print("[GameState]: Stalemate")
+                                    view_ending_box = True
+                                    white_won = None
+                                    end_state = Engine.GameState.STALEMATE
                                 elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
                                     print("[GameState]: Continue")
                                 elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
                                     print("[GameState]: Insufficient material")
-
+                                    view_ending_box = True
+                                    white_won = None
+                                    end_state = Engine.GameState.INSUFFICIENT_MATERIAL
                                 # TODO: Cool sound when taking pieces, less cool when not ???
                                 reset_move_attempt()
                             # First position selected v2
@@ -218,7 +262,8 @@ def main():
                                     reset_move_attempt()
 
         draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
-        draw_game_ending(True)  #  TODO : USUNAC
+        if view_ending_box:
+            draw_game_ending(end_state, white_won)
         p.display.flip()
 
         if play_against_ai and (player_is_white != chessboard_state.white_to_move):
@@ -262,7 +307,7 @@ def draw_chessboard():
 
 def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
     """Highlight all the possible moves along with the selected tile"""
-    if selected_tile == ():
+    if selected_tile is None:
         return
 
     p.draw.rect(SCREEN, COLOR_HIGHLIGHT,
@@ -363,17 +408,59 @@ def draw_init_window(top_is_white=True):
     p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_4_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
     SCREEN.blit(labels[3], labels_rects[3])
 
-def draw_game_ending(white_wins=None):
+
+def draw_game_ending(state, white_wins=None):
     p.draw.rect(SCREEN, COLOR_LIGHT, p.Rect(RECT_GAME_END_X[0], RECT_GAME_END_Y[0],
                                             RECT_GAME_END_WIDTH, RECT_GAME_END_HEIGHT))
+    font = p.font.SysFont("monospace", 20)
     if white_wins is not None:
-        text = "Wygrywają "
-        text += "białe" if white_wins else "czarne"
-        font = p.font.SysFont("monospace", 20)
-        label = font.render(text, True, COLOR_DARK)
-        label_rect = label.get_rect(center=((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2,
-                                            (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2))
+        top_text = "Winner: "
+        top_text += "white" if white_wins else "black"
+        label = font.render(top_text, True, COLOR_DARK)
+        label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
+                                            (RECT_GAME_END_Y[0] + (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2) // 2))
         SCREEN.blit(label, label_rect)
+    else:
+        top_text = "Draw!"
+        label = font.render(top_text, True, COLOR_DARK)
+        label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
+                                            (RECT_GAME_END_Y[0] + (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2) // 2))
+        SCREEN.blit(label, label_rect)
+
+    bottom_text = "State: "
+    if state == Engine.GameState.STALEMATE:
+        bottom_text += "Stalemate"
+    elif state == Engine.GameState.INSUFFICIENT_MATERIAL:
+        bottom_text += "Too few pieces"
+    elif state == Engine.GameState.CHECKMATE:
+        bottom_text += "Checkmate"
+    label = font.render(bottom_text, True, COLOR_DARK)
+    label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
+                                        (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2))
+    SCREEN.blit(label, label_rect)
+
+    p.draw.line(SCREEN, COLOR_BORDER, (BUTTONS_X[0], BUTTON_3_Y[0]),
+                (BUTTONS_X[1], BUTTON_3_Y[0]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (BUTTONS_X[0], BUTTON_3_Y[1]),
+                (BUTTONS_X[1], BUTTON_3_Y[1]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (BUTTONS_X[1], BUTTON_3_Y[0]),
+                (BUTTONS_X[1], BUTTON_3_Y[1]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (BUTTONS_X[0], BUTTON_3_Y[0]),
+                (BUTTONS_X[0], BUTTON_3_Y[1]), width=2)
+
+    label = font.render("Close pop-up", True, COLOR_DARK)
+    label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
+                                        (RECT_GAME_END_Y[1] + (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2) // 2))
+    SCREEN.blit(label, label_rect)
+
+    p.draw.line(SCREEN, COLOR_BORDER, (RECT_GAME_END_X[0], RECT_GAME_END_Y[0]),
+                (RECT_GAME_END_X[1], RECT_GAME_END_Y[0]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (RECT_GAME_END_X[0], RECT_GAME_END_Y[1]),
+                (RECT_GAME_END_X[1], RECT_GAME_END_Y[1]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (RECT_GAME_END_X[1], RECT_GAME_END_Y[0]),
+                (RECT_GAME_END_X[1], RECT_GAME_END_Y[1]), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (RECT_GAME_END_X[0], RECT_GAME_END_Y[0]),
+                (RECT_GAME_END_X[0], RECT_GAME_END_Y[1]), width=2)
 
 
 def get_legal_moves_list(piece):
