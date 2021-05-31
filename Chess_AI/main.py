@@ -161,10 +161,10 @@ def main():
                     print(f"Clicked on {get_tile_str((mouse_row, mouse_col))}")
 
                     # Double click
-                    if selected_tile == (mouse_row, mouse_col):
+                    if selected_tile == [mouse_row, mouse_col]:
                         reset_move_attempt()
                     else:
-                        selected_tile = (mouse_row, mouse_col)
+                        selected_tile = [mouse_row, mouse_col]
                         tiles_clicked_on.append(selected_tile)
 
                         # First position selected v1
