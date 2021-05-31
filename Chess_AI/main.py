@@ -59,6 +59,8 @@ def main():
     king_pos = None
     player_is_white = True
     first_white_ai_move_made = False
+    view_promotion_box = False
+    promotion_choice = None
     view_ending_box = False
     white_won = None
     end_state = None
@@ -67,15 +69,16 @@ def main():
     play_against_ai = False
 
     def reset_move_attempt():
-        nonlocal selected_tile, selected_piece, possible_moves, tiles_clicked_on
+        nonlocal selected_tile, selected_piece, possible_moves, tiles_clicked_on, promotion_choice
         selected_tile = None
         tiles_clicked_on = []
         selected_piece = None
         possible_moves = []
+        promotion_choice = None
 
     def init_game(is_fist_init):
-        nonlocal running, quit_after_loop, play_against_ai, position, view_ending_box, white_won, \
-            player_is_white, chessboard_state, first_white_ai_move_made, selected_tile, end_state
+        nonlocal running, quit_after_loop, play_against_ai, position, view_ending_box, white_won, player_is_white, \
+            view_promotion_box, promotion_choice, chessboard_state, first_white_ai_move_made, selected_tile, end_state
         while running:
             clock.tick(FPS)
             for e in p.event.get():
@@ -110,6 +113,8 @@ def main():
             first_white_ai_move_made = False
             selected_tile = None
             view_ending_box = False
+            view_promotion_box = False
+            promotion_choice = None
             white_won = None
             end_state = None
             chessboard_state = Engine.ChessboardState()
@@ -117,10 +122,12 @@ def main():
     def make_ai_move():
         nonlocal chessboard_state, king_pos, view_ending_box, white_won, end_state
         ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+        if ai_move is None:
+            return
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
         king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
             else chessboard_state.black_king.position
-        draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
+        draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos, view_promotion_box=False)
         p.display.flip()
 
         print(f"[AIMove]: {get_tile_str(ai_move[0])} --> {get_tile_str(ai_move[1])}")
@@ -168,11 +175,11 @@ def main():
                 position = p.mouse.get_pos()
 
                 # Right click
-                if not view_ending_box and event.button == 3:
+                if not view_ending_box and not view_promotion_box and event.button == 3:
                     reset_move_attempt()
 
                 # Middle click
-                elif not view_ending_box and event.button == 2:
+                elif not view_ending_box and not view_promotion_box and event.button == 2:
                     reset_move_attempt()
                     # Undo move (or 2 moves if playing against AI)
                     if play_against_ai:
@@ -180,6 +187,41 @@ def main():
                         chessboard_state.undo_move()
                     else:
                         chessboard_state.undo_move()
+                    king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
+                        else chessboard_state.black_king.position
+
+                # Promotion choice left click
+                if view_promotion_box:
+                    top_tile = tuple(selected_tile) if chessboard_state.white_to_move else (4, selected_tile[1])
+                    top_left_coords = (top_tile[1] * SQUARE_SIZE, top_tile[0] * SQUARE_SIZE)
+                    top_right_coords = (top_tile[1] * SQUARE_SIZE + SQUARE_SIZE, top_tile[0] * SQUARE_SIZE)
+                    bottom_left_coords = (top_tile[1] * SQUARE_SIZE, top_tile[0] * SQUARE_SIZE + 4 * SQUARE_SIZE)
+                    if event.button == 1 and top_left_coords[0] <= position[0] <= top_right_coords[0] and \
+                            top_left_coords[1] <= position[1] <= bottom_left_coords[1]:
+
+                        if top_left_coords[1] <= position[1] <= top_left_coords[1] + SQUARE_SIZE:
+                            promotion_choice = Engine.Queen
+                        elif top_left_coords[1] + SQUARE_SIZE <= position[1] <= top_left_coords[1] + 2 * SQUARE_SIZE:
+                            promotion_choice = Engine.Knight
+                        elif top_left_coords[1] + 2 * SQUARE_SIZE <= position[1] \
+                                <= top_left_coords[1] + 3 * SQUARE_SIZE:
+                            promotion_choice = Engine.Rook
+                        elif top_left_coords[1] + 3 * SQUARE_SIZE <= position[1] <= bottom_left_coords[1]:
+                            promotion_choice = Engine.Bishop
+                        else:
+                            promotion_choice = Engine.Queen
+
+                        chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
+                            .move(tiles_clicked_on[1], promotion_choice=promotion_choice)
+
+                        king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
+                            else chessboard_state.black_king.position
+
+                        view_promotion_box = False
+                        reset_move_attempt()
+                    else:
+                        view_promotion_box = False
+                        reset_move_attempt()
 
                 # Popup left click
                 if view_ending_box:
@@ -192,7 +234,7 @@ def main():
                                 end_state = None
 
                 # Left click
-                if not view_ending_box and event.button == 1 and \
+                if not view_ending_box and not view_promotion_box and event.button == 1 and \
                         position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
                     mouse_row = position[1] // SQUARE_SIZE
                     mouse_col = position[0] // SQUARE_SIZE
@@ -219,36 +261,39 @@ def main():
                         # Second position selected
                         elif len(tiles_clicked_on) == 2:
                             if selected_tile in possible_moves:
-                                chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
-                                    .move(tiles_clicked_on[1])
+                                if isinstance(selected_piece, Engine.Pawn) and selected_tile[0] in [0, 7]:
+                                    # View promotion box
+                                    view_promotion_box = True
+                                else:
+                                    chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
+                                        .move(tiles_clicked_on[1])
 
                                 king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
                                     else chessboard_state.black_king.position
 
-                                print(
-                                    f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} -->"
-                                    f" {get_tile_str(tiles_clicked_on[1])}")
-                                if chessboard_state.game_state() == Engine.GameState.CHECK:
-                                    print("[GameState]: Check")
-                                elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
-                                    print("[GameState]: Checkmate")
-                                    view_ending_box = True
-                                    white_won = not chessboard_state.white_to_move
-                                    end_state = Engine.GameState.CHECKMATE
-                                elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
-                                    print("[GameState]: Stalemate")
-                                    view_ending_box = True
-                                    white_won = None
-                                    end_state = Engine.GameState.STALEMATE
-                                elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
-                                    print("[GameState]: Continue")
-                                elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
-                                    print("[GameState]: Insufficient material")
-                                    view_ending_box = True
-                                    white_won = None
-                                    end_state = Engine.GameState.INSUFFICIENT_MATERIAL
-                                # TODO: Cool sound when taking pieces, less cool when not ???
-                                reset_move_attempt()
+                                if not view_promotion_box:
+                                    print(f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} -->"
+                                          f" {get_tile_str(tiles_clicked_on[1])}")
+                                    if chessboard_state.game_state() == Engine.GameState.CHECK:
+                                        print("[GameState]: Check")
+                                    elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+                                        print("[GameState]: Checkmate")
+                                        view_ending_box = True
+                                        white_won = not chessboard_state.white_to_move
+                                        end_state = Engine.GameState.CHECKMATE
+                                    elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+                                        print("[GameState]: Stalemate")
+                                        view_ending_box = True
+                                        white_won = None
+                                        end_state = Engine.GameState.STALEMATE
+                                    elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
+                                        print("[GameState]: Continue")
+                                    elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
+                                        print("[GameState]: Insufficient material")
+                                        view_ending_box = True
+                                        white_won = None
+                                        end_state = Engine.GameState.INSUFFICIENT_MATERIAL
+                                    reset_move_attempt()
                             # First position selected v2
                             else:
                                 tiles_clicked_on = [selected_tile]
@@ -261,7 +306,9 @@ def main():
                                 else:
                                     reset_move_attempt()
 
-        draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
+        draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos, view_promotion_box)
+        if view_promotion_box:
+            draw_promotion_choice(selected_tile, white_move=chessboard_state.white_to_move)
         if view_ending_box:
             draw_game_ending(end_state, white_won)
         p.display.flip()
@@ -278,12 +325,13 @@ def load_pieces():
         PIECES[piece] = p.transform.scale(p.image.load("pieces/" + piece + ".png"), (SQUARE_SIZE, SQUARE_SIZE))
 
 
-def draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos):
+def draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos, view_promotion_box):
     """Show the game"""
     draw_chessboard()
     if king_pos is not None:
         highlight_king(chessboard_state, king_pos)
-    highlight_possible_moves(selected_tile, possible_moves, chessboard_state)
+    if not view_promotion_box:
+        highlight_possible_moves(selected_tile, possible_moves, chessboard_state)
     draw_pieces(chessboard_state)
 
 
@@ -461,6 +509,36 @@ def draw_game_ending(state, white_wins=None):
                 (RECT_GAME_END_X[1], RECT_GAME_END_Y[1]), width=2)
     p.draw.line(SCREEN, COLOR_BORDER, (RECT_GAME_END_X[0], RECT_GAME_END_Y[0]),
                 (RECT_GAME_END_X[0], RECT_GAME_END_Y[1]), width=2)
+
+
+def draw_promotion_choice(selected_tile, white_move=True):
+    pieces_str_white = ["wQ", "wN", "wR", "wB"]
+    pieces_str_black = ["bQ", "bN", "bR", "bB"]
+    pieces_str = pieces_str_white if white_move else pieces_str_black
+
+    top_tile = tuple(selected_tile) if white_move else (4, selected_tile[1])
+    top_left_coords = (top_tile[1] * SQUARE_SIZE, top_tile[0] * SQUARE_SIZE)
+    top_right_coords = (top_tile[1] * SQUARE_SIZE + SQUARE_SIZE, top_tile[0] * SQUARE_SIZE)
+    bottom_left_coords = (top_tile[1] * SQUARE_SIZE, top_tile[0] * SQUARE_SIZE + 4 * SQUARE_SIZE)
+    bottom_right_coords = (top_tile[1] * SQUARE_SIZE + SQUARE_SIZE, top_tile[0] * SQUARE_SIZE + 4 * SQUARE_SIZE)
+
+    p.draw.rect(SCREEN, COLOR_HIGHLIGHT,
+                p.Rect(top_left_coords[0], top_left_coords[1], SQUARE_SIZE, 4 * SQUARE_SIZE))
+    p.draw.line(SCREEN, COLOR_BORDER, top_left_coords, bottom_left_coords, width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, top_right_coords, bottom_right_coords, width=2)
+
+    p.draw.line(SCREEN, COLOR_BORDER, top_left_coords, top_right_coords, width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (top_left_coords[0], top_left_coords[1] + SQUARE_SIZE),
+                (top_right_coords[0], top_right_coords[1] + SQUARE_SIZE), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (top_left_coords[0], top_left_coords[1] + 2 * SQUARE_SIZE),
+                (top_right_coords[0], top_right_coords[1] + 2 * SQUARE_SIZE), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, (top_left_coords[0], top_left_coords[1] + 3 * SQUARE_SIZE),
+                (top_right_coords[0], top_right_coords[1] + 3 * SQUARE_SIZE), width=2)
+    p.draw.line(SCREEN, COLOR_BORDER, bottom_left_coords, bottom_right_coords, width=2)
+
+    for i, piece_str in enumerate(pieces_str):
+        SCREEN.blit(PIECES[piece_str], p.Rect(top_left_coords[0], top_left_coords[1] + i * SQUARE_SIZE,
+                                              SQUARE_SIZE, SQUARE_SIZE))
 
 
 def get_legal_moves_list(piece):

@@ -571,7 +571,7 @@ class Pawn(Piece):
                             new_position[0] += row_step
                             yield new_position
 
-    def move(self, new_position):
+    def move(self, new_position, promotion_choice=Queen):
         pawn = Pawn(self.position.copy(), self.color, self.board_state)
         if not self.first_move:
             pawn.first_move = False
@@ -606,13 +606,29 @@ class Pawn(Piece):
             pawn_promotion = True
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
                                                        self.board_state.board[new_position[0]][new_position[1]]))
-            promoted_pawn = Queen(new_position, self.color, self.board_state)
+            promoted_pawn = None
+            if promotion_choice is Knight:
+                promoted_pawn = Knight(new_position, self.color, self.board_state)
+            elif promotion_choice is Rook:
+                promoted_pawn = Rook(new_position, self.color, self.board_state)
+            elif promotion_choice is Bishop:
+                promoted_pawn = Bishop(new_position, self.color, self.board_state)
+            else:
+                promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
         elif self.color == Color.BLACK and new_position[0] == 7:
             pawn_promotion = True
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
                                                        self.board_state.board[new_position[0]][new_position[1]]))
-            promoted_pawn = Queen(new_position, self.color, self.board_state)
+            promoted_pawn = None
+            if promotion_choice is Knight:
+                promoted_pawn = Knight(new_position, self.color, self.board_state)
+            elif promotion_choice is Rook:
+                promoted_pawn = Rook(new_position, self.color, self.board_state)
+            elif promotion_choice is Bishop:
+                promoted_pawn = Bishop(new_position, self.color, self.board_state)
+            else:
+                promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
 
         if not en_passant and not pawn_promotion:
