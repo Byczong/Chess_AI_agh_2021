@@ -181,10 +181,16 @@ def main():
                 # Middle click
                 elif not view_ending_box and not view_promotion_box and event.button == 2:
                     reset_move_attempt()
-                    # Undo move (or 2 moves if playing against AI)
+                    # Undo move
                     if play_against_ai:
-                        chessboard_state.undo_move()
-                        chessboard_state.undo_move()
+                        if (chessboard_state.game_state() == Engine.GameState.CHECKMATE or
+                                chessboard_state.game_state() == Engine.GameState.STALEMATE or
+                                chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL) and \
+                                player_is_white != chessboard_state.white_to_move:
+                            chessboard_state.undo_move()
+                        else:
+                            chessboard_state.undo_move()
+                            chessboard_state.undo_move()
                     else:
                         chessboard_state.undo_move()
                     king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
