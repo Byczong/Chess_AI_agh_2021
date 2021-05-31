@@ -9,9 +9,13 @@ class Color:
 class PieceType:
     KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN = range(6)
 
+    @staticmethod
+    def piece_type_list():
+        return [PieceType.KING, PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT, PieceType.PAWN]
+
+
 
 class ChessboardState:
-    # TODO: UNDO MOVES
     def __init__(self):
         self.board = [[None] * 8 for _ in range(8)]
         self.init_board()
@@ -40,25 +44,15 @@ class ChessboardState:
             for pawns_column in range(8):
                 self.board[pawns_row][pawns_column] = Pawn([pawns_row, pawns_column], color, self)
 
-    def get_list_of_pieces(self, piece_type, color):
-        pieces = []
-        for row in range(8):
-            for column in range(8):
-                piece = self.board[row][column]
-                if piece is not None:
-                    if piece.color == color and piece.type == piece_type:
-                        pieces.append(piece)
-        return pieces
-
     def get_current_color(self):
         if self.white_to_move:
             return Color.WHITE
         else:
             return Color.BLACK
 
-    def legal_moves_generator(self):
+    def legal_moves(self):
         color = self.get_current_color()
-
+        legal_moves_list = []
         for row in range(8):
             for column in range(8):
                 piece = self.board[row][column]
@@ -67,8 +61,9 @@ class ChessboardState:
                         moves_list = piece.get_legal_moves_list()
                         if moves_list is not None:
                             for new_position in moves_list:
-                                move = (piece.position, new_position)
-                                yield move
+                                move = [piece.position.copy(), new_position.copy()]
+                                legal_moves_list.append(move)
+        return legal_moves_list
 
     def is_capture(self, move):
         if self.board[move[1][0]][move[1][1]] is not None:
@@ -234,6 +229,45 @@ class ChessboardState:
             self.board[pawn.position[0]][pawn.position[1]] = pawn
         return True
 
+    def undo_move(self):
+        if len(self.moves_history) == 0:
+            return
+        self.move_counter -= 1
+        move = self.moves_history.pop()
+
+        start_position = move.start_position
+        end_position = move.end_position
+        moved_piece = move.moved_piece
+        captured_piece = move.captured_piece
+
+        moved_piece.position = start_position
+        self.board[start_position[0]][start_position[1]] = moved_piece
+        self.board[end_position[0]][end_position[1]] = None
+        if captured_piece is not None:
+            self.board[captured_piece.position[0]][captured_piece.position[1]] = captured_piece
+            if captured_piece.color == moved_piece.color:
+                if captured_piece.position == [7, 7]:
+                    self.board[7][5] = None
+                elif captured_piece.position == [7, 0]:
+                    self.board[7][3] = None
+                elif captured_piece.position == [0, 7]:
+                    self.board[0][5] = None
+                elif captured_piece.position == [0, 0]:
+                    self.board[0][3] = None
+
+
+        if moved_piece.type == PieceType.KING:
+            if moved_piece.color == Color.WHITE:
+                self.white_king = moved_piece
+            else:
+                self.black_king = moved_piece
+
+        if self.white_to_move:
+            self.white_to_move = False
+        else:
+            self.white_to_move = True
+
+
     @staticmethod
     def is_move_out_of_board(position):
         if 7 >= position[0] >= 0 and 7 >= position[1] >= 0:
@@ -271,7 +305,7 @@ class Piece:
         return legal_moves_list
 
     def move(self, new_position):
-        self.board_state.moves_history.append((self.position, new_position))
+        self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), self, self.board_state.board[new_position[0]][new_position[1]]))
         self.board_state.move_counter += 1
         self.board_state.board[self.position[0]][self.position[1]] = None
         self.board_state.board[new_position[0]][new_position[1]] = self
@@ -328,34 +362,76 @@ class King(Piece):
                         yield [row, 2]
 
     def move(self, new_position):
-        self.board_state.moves_history.append((self.position, new_position))
         self.board_state.move_counter += 1
-
+        castling = False
         if abs(self.position[1] - new_position[1]) == 2:
-            if new_position == (7, 6):
+            castling = True
+            if new_position == [7, 6]:
                 rook = self.board_state.board[7][7]
+
+                king = King(self.position.copy(), self.color, self.board_state)
+                if not self.first_move:
+                    king.first_move = False
+                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
+                if not rook.first_move:
+                    rook_copy.first_move = False
+                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
+
                 self.board_state.board[7][5] = rook
                 self.board_state.board[7][7] = None
                 rook.position = [7, 5]
                 rook.first_move = False
-            elif new_position == (7, 2):
+            elif new_position == [7, 2]:
                 rook = self.board_state.board[7][0]
+
+                king = King(self.position.copy(), self.color, self.board_state)
+                if not self.first_move:
+                    king.first_move = False
+                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
+                if not rook.first_move:
+                    rook_copy.first_move = False
+                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
+
                 self.board_state.board[7][3] = rook
                 self.board_state.board[7][0] = None
                 rook.position = [7, 3]
                 rook.first_move = False
-            elif new_position == (0, 6):
+            elif new_position == [0, 6]:
                 rook = self.board_state.board[0][7]
+
+                king = King(self.position.copy(), self.color, self.board_state)
+                if not self.first_move:
+                    king.first_move = False
+                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
+                if not rook.first_move:
+                    rook_copy.first_move = False
+                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
+
                 self.board_state.board[0][5] = rook
                 self.board_state.board[0][7] = None
                 rook.position = [0, 5]
                 rook.first_move = False
-            elif new_position == (0, 2):
+            elif new_position == [0, 2]:
                 rook = self.board_state.board[0][0]
+
+                king = King(self.position.copy(), self.color, self.board_state)
+                if not self.first_move:
+                    king.first_move = False
+                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
+                if not rook.first_move:
+                    rook_copy.first_move = False
+                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
+
                 self.board_state.board[0][3] = rook
                 self.board_state.board[0][0] = None
                 rook.position = [0, 3]
                 rook.first_move = False
+
+        king = King(self.position.copy(), self.color, self.board_state)
+        if not self.first_move:
+            king.first_move = False
+        if not castling:
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, self.board_state.board[new_position[0]][new_position[1]]))
 
         self.board_state.board[self.position[0]][self.position[1]] = None
         self.board_state.board[new_position[0]][new_position[1]] = self
@@ -417,7 +493,11 @@ class Rook(Piece):
                     new_position[1] += step[1]
 
     def move(self, new_position):
-        self.board_state.moves_history.append((self.position, new_position))
+        rook = Rook(self.position.copy(), self.color, self.board_state)
+        if not self.first_move:
+            rook.first_move = False
+        self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), rook,
+                                                   self.board_state.board[new_position[0]][new_position[1]]))
         self.board_state.move_counter += 1
 
         self.board_state.board[self.position[0]][self.position[1]] = None
@@ -524,7 +604,13 @@ class Pawn(Piece):
                             yield new_position
 
     def move(self, new_position):
-        self.board_state.moves_history.append((self.position, new_position))
+        pawn = Pawn(self.position.copy(), self.color, self.board_state)
+        if not self.first_move:
+            pawn.first_move = False
+        if self.moved_by_two:
+            pawn.moved_by_two = True
+        pawn.last_move_number = self.last_move_number
+
         self.board_state.move_counter += 1
         self.last_move_number = self.board_state.move_counter
         if abs(self.position[0] - new_position[0]) == 2:
@@ -532,26 +618,43 @@ class Pawn(Piece):
         else:
             self.moved_by_two = False
 
+        en_passant = False
         # en_passant
         if self.board_state.board[new_position[0]][new_position[1]] is None and \
                 abs(new_position[1] - self.position[1]) == 1:
+            en_passant = True
             if self.color == Color.WHITE:
                 pawn_row_step = -1
             else:
                 pawn_row_step = 1
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
+                                                       self.board_state.board[new_position[0] - pawn_row_step][new_position[1]]))
             self.board_state.board[new_position[0] - pawn_row_step][new_position[1]] = None
 
-        self.board_state.board[self.position[0]][self.position[1]] = None
-        self.board_state.board[new_position[0]][new_position[1]] = self
-        self.position = new_position
 
+        pawn_promotion = False
         # pawn promotion
         if self.color == Color.WHITE and new_position[0] == 0:
+            pawn_promotion = True
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
+                                                       self.board_state.board[new_position[0]][new_position[1]]))
             promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
         elif self.color == Color.BLACK and new_position[0] == 7:
+            pawn_promotion = True
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
+                                                       self.board_state.board[new_position[0]][new_position[1]]))
             promoted_pawn = Queen(new_position, self.color, self.board_state)
             self.board_state.board[new_position[0]][new_position[1]] = promoted_pawn
+
+        if not en_passant and not pawn_promotion:
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
+                                                       self.board_state.board[new_position[0]][new_position[1]]))
+
+        self.board_state.board[self.position[0]][self.position[1]] = None
+        if not pawn_promotion:
+            self.board_state.board[new_position[0]][new_position[1]] = self
+        self.position = new_position
 
         if self.first_move:
             self.first_move = False
@@ -623,106 +726,99 @@ class BoardEvaluation:
                            [5, 10, 10, -20, -20, 10, 10, 5],
                            [0, 0, 0, 0, 0, 0, 0, 0]
                            ]
+        self.position_tables = [None] * 6
+        self.position_tables[PieceType.KING] = self.king_table
+        self.position_tables[PieceType.QUEEN] = self.queen_table
+        self.position_tables[PieceType.ROOK] = self.rook_table
+        self.position_tables[PieceType.BISHOP] = self.bishop_table
+        self.position_tables[PieceType.KNIGHT] = self.knight_table
+        self.position_tables[PieceType.PAWN] = self.pawn_table
 
     def evaluate(self):
         game_state = self.board_state.game_state()
         if game_state == GameState.CHECKMATE:
             if self.board_state.white_to_move:
-                return -9999
+                return -99999
             else:
-                return 9999
+                return 99999
         elif game_state == GameState.STALEMATE or game_state == GameState.INSUFFICIENT_MATERIAL:
             return 0
         else:
-            return self.evaluation_score()
+            pieces_lists = [None] * 6
+            for i in range(6):
+                pieces_lists[i] = [[], []]
+            for row in range(8):
+                for column in range(8):
+                    piece = self.board_state.board[row][column]
+                    if piece is not None:
+                        pieces_lists[piece.type][piece.color].append(piece)
+            evaluation = self.material_score(pieces_lists) + self.position_score(pieces_lists)
+            if self.board_state.white_to_move:
+                return evaluation
+            else:
+                return -evaluation
 
-    def evaluation_score(self):
-        pieces_lists = [None] * 6
-        for i in range(6):
-            pieces_lists[i] = [[], []]
-        for row in range(8):
-            for column in range(8):
-                piece = self.board_state.board[row][column]
-                if piece is not None:
-                    pieces_lists[piece.type][piece.color].append(piece)
+    @staticmethod
+    def material_score(pieces_lists):
+        material_score = 0
+        for piece_type in PieceType.piece_type_list():
+            if piece_type == PieceType.KING:
+                continue
+            value = None
+            if piece_type == PieceType.QUEEN:
+                value = 900
+            elif piece_type == PieceType.ROOK:
+                value = 500
+            elif piece_type == PieceType.BISHOP:
+                value = 330
+            elif piece_type == PieceType.KNIGHT:
+                value = 320
+            elif piece_type == PieceType.PAWN:
+                value = 100
+            material_score += value * (len(pieces_lists[piece_type][Color.WHITE]) - len(pieces_lists[piece_type][Color.BLACK]))
+        return material_score
 
-        material_score = 100 * (len(pieces_lists[PieceType.PAWN][Color.WHITE]) - len(pieces_lists[PieceType.PAWN][Color.BLACK])) \
-                         + 320 * (len(pieces_lists[PieceType.KNIGHT][Color.WHITE]) - len(pieces_lists[PieceType.KNIGHT][Color.BLACK])) \
-                         + 330 * (len(pieces_lists[PieceType.BISHOP][Color.WHITE]) - len(pieces_lists[PieceType.BISHOP][Color.BLACK])) \
-                         + 500 * (len(pieces_lists[PieceType.ROOK][Color.WHITE]) - len(pieces_lists[PieceType.ROOK][Color.BLACK])) \
-                         + 900 * (len(pieces_lists[PieceType.QUEEN][Color.WHITE]) - len(pieces_lists[PieceType.QUEEN][Color.BLACK]))
+    def position_score(self, pieces_lists):
+        position_score = 0
+        for piece_type in PieceType.piece_type_list():
+            for piece in pieces_lists[piece_type][Color.WHITE]:
+                position_score += self.position_tables[piece_type][piece.position[0]][piece.position[1]]
+            for piece in pieces_lists[piece_type][Color.BLACK]:
+                position_score -= self.position_tables[piece_type][7 - piece.position[0]][piece.position[1]]
+        return position_score
 
-        king_position_score = sum([self.king_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.WHITE]])\
-                              + sum([-self.king_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.BLACK]])
 
-        queen_position_score = sum([self.queen_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.QUEEN][Color.WHITE]])\
-                              + sum([-self.queen_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.QUEEN][Color.BLACK]])
-
-        rook_position_score = sum([self.rook_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.ROOK][Color.WHITE]])\
-                              + sum([-self.rook_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.ROOK][Color.BLACK]])
-
-        bishop_position_score = sum([self.bishop_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.BISHOP][Color.WHITE]])\
-                              + sum([-self.bishop_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KING][Color.BLACK]])
-
-        knight_position_score = sum([self.knight_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KNIGHT][Color.WHITE]])\
-                              + sum([-self.knight_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.KNIGHT][Color.BLACK]])
-
-        pawn_position_score = sum([self.pawn_table[piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.PAWN][Color.WHITE]])\
-                              + sum([-self.pawn_table[7 - piece.position[0]][piece.position[1]] for piece in pieces_lists[PieceType.PAWN][Color.BLACK]])
-
-        evaluation = material_score + king_position_score + queen_position_score + rook_position_score \
-                     + bishop_position_score + knight_position_score + pawn_position_score
-        if self.board_state.white_to_move:
-            return evaluation
-        else:
-            return -evaluation
 
 
 class ChessAI:
     def __init__(self, board_state):
         self.board_state = board_state
+        self.evaluator = BoardEvaluation(self.board_state)
 
     def ai_move(self, depth=3):
-        board_state = self.board_state
         best_move = None
         best_value = -99999
         alpha = -100000
         beta = 100000
-        for move in board_state.legal_moves_generator():
-
-            board_state_after_move = ChessboardState()
-            for history_move in board_state.moves_history:
-                board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
-            board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
-            self.board_state = board_state_after_move
-
+        for move in self.board_state.legal_moves():
+            self.board_state.board[move[0][0]][move[0][1]].move(move[1])
             board_value = -self.alphabeta(-beta, -alpha, depth - 1)
             if board_value > best_value:
                 best_value = board_value
                 best_move = move
             if board_value > alpha:
                 alpha = board_value
-
-            self.board_state = board_state
-
+            self.board_state.undo_move()
         return best_move
 
     def alphabeta(self, alpha, beta, depth):
-        board_state = self.board_state
-        best_score = -9999
+        best_score = -99999
         if depth == 0:
             return self.quiescence_search(alpha, beta)
-        for move in board_state.legal_moves_generator():
-
-            board_state_after_move = ChessboardState()
-            for history_move in board_state.moves_history:
-                board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
-            board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
-            self.board_state = board_state_after_move
-
+        for move in self.board_state.legal_moves():
+            self.board_state.board[move[0][0]][move[0][1]].move(move[1])
             score = -self.alphabeta(-beta, -alpha, depth - 1)
-
-            self.board_state = board_state
+            self.board_state.undo_move()
             if score >= beta:
                 return score
             if score > best_score:
@@ -732,29 +828,26 @@ class ChessAI:
         return best_score
 
     def quiescence_search(self, alpha, beta):
-        board_state = self.board_state
-        evaluation = BoardEvaluation(board_state).evaluate()
+        evaluation = self.evaluator.evaluate()
         if evaluation >= beta:
             return beta
         if alpha < evaluation:
             alpha = evaluation
-
-        for move in board_state.legal_moves_generator():
-            if board_state.is_capture(move):
-
-                board_state_after_move = ChessboardState()
-                for history_move in board_state.moves_history:
-                    board_state_after_move.board[history_move[0][0]][history_move[0][1]].move(history_move[1])
-                board_state_after_move.board[move[0][0]][move[0][1]].move(move[1])
-                self.board_state = board_state_after_move
-
+        for move in self.board_state.legal_moves():
+            if self.board_state.is_capture(move):
+                self.board_state.board[move[0][0]][move[0][1]].move(move[1])
                 score = -self.quiescence_search(-beta, -alpha)
-
-                self.board_state = board_state
-
+                self.board_state.undo_move()
                 if score >= beta:
                     return beta
                 if score > alpha:
                     alpha = score
-
         return alpha
+
+
+class Move:
+    def __init__(self, start_position, end_position, moved_piece, captured_piece):
+        self.start_position = start_position
+        self.end_position = end_position
+        self.moved_piece = moved_piece
+        self.captured_piece = captured_piece

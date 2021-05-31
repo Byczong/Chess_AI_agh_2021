@@ -152,7 +152,7 @@ def main():
                 # Middle click
                 elif event.button == 2:
                     reset_move_attempt()
-                    # TODO: Undo the last move
+                    chessboard_state.undo_move()
 
                 # Left click
                 if event.button == 1 and position[0] <= CHESSBOARD_WIDTH and position[1] <= CHESSBOARD_HEIGHT:
