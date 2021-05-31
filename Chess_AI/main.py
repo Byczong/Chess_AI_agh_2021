@@ -102,7 +102,7 @@ def main():
 
     def make_ai_move():
         nonlocal chessboard_state, king_pos
-        ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+        ai_move = Engine.ChessAI(chessboard_state).ai_move()
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
         king_pos = chessboard_state.white_king.position if chessboard_state.white_to_move \
             else chessboard_state.black_king.position
