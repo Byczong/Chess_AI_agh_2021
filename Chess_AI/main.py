@@ -26,6 +26,10 @@ RECT_COLOR_A_Y = (BUTTON_3_Y[0], BUTTON_3_Y[0] + RECT_COLORS_HEIGHT)
 RECT_COLOR_B_X = (BUTTONS_X[1] + WIDTH // 32, BUTTONS_X[1] + WIDTH // 32 + RECT_COLORS_WIDTH)
 RECT_COLOR_B_Y = (RECT_COLOR_A_Y[1], RECT_COLOR_A_Y[1] + RECT_COLORS_HEIGHT)
 
+RECT_GAME_END_WIDTH, RECT_GAME_END_HEIGHT = WIDTH // 2, HEIGHT // 2
+RECT_GAME_END_X = (WIDTH // 4, WIDTH // 4 + RECT_GAME_END_WIDTH)
+RECT_GAME_END_Y = (HEIGHT // 4, HEIGHT // 4 + RECT_GAME_END_HEIGHT)
+
 COLOR_LIGHT = p.Color((255, 235, 205))
 COLOR_DARK = p.Color((140, 80, 42))
 COLOR_HIGHLIGHT = p.Color((53, 180, 159))
@@ -39,7 +43,7 @@ BOARD_FILES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 def main():
     p.init()
-    p.display.set_caption("Chess (Alpha-Beta testing)")
+    p.display.set_caption("Chess")
     clock = p.time.Clock()
     SCREEN.fill(COLOR_DARK)
     load_pieces()
@@ -120,7 +124,6 @@ def main():
             print("[GameState]: Continue")
         elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
             print("[GameState]: Insufficient material")
-
 
     # Initial window
     init_game(True)
@@ -215,6 +218,7 @@ def main():
                                     reset_move_attempt()
 
         draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos)
+        draw_game_ending(True)  #  TODO : USUNAC
         p.display.flip()
 
         if play_against_ai and (player_is_white != chessboard_state.white_to_move):
@@ -358,6 +362,18 @@ def draw_init_window(top_is_white=True):
 
     p.draw.rect(SCREEN, COLOR_DARK, p.Rect(BUTTONS_X[0], BUTTON_4_Y[0], BUTTON_WIDTH, BUTTON_HEIGHT))
     SCREEN.blit(labels[3], labels_rects[3])
+
+def draw_game_ending(white_wins=None):
+    p.draw.rect(SCREEN, COLOR_LIGHT, p.Rect(RECT_GAME_END_X[0], RECT_GAME_END_Y[0],
+                                            RECT_GAME_END_WIDTH, RECT_GAME_END_HEIGHT))
+    if white_wins is not None:
+        text = "Wygrywają "
+        text += "białe" if white_wins else "czarne"
+        font = p.font.SysFont("monospace", 20)
+        label = font.render(text, True, COLOR_DARK)
+        label_rect = label.get_rect(center=((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2,
+                                            (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2))
+        SCREEN.blit(label, label_rect)
 
 
 def get_legal_moves_list(piece):
