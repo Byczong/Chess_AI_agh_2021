@@ -353,66 +353,43 @@ class King(Piece):
                         yield [row, 2]
 
     def move(self, new_position):
+        def append_move_history(rook):
+            king = King(self.position.copy(), self.color, self.board_state)
+            if not self.first_move:
+                king.first_move = False
+            rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
+            if not rook.first_move:
+                rook_copy.first_move = False
+            self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
+
         self.board_state.move_counter += 1
         castling = False
         if abs(self.position[1] - new_position[1]) == 2:
             castling = True
             if new_position == [7, 6]:
                 rook = self.board_state.board[7][7]
-
-                king = King(self.position.copy(), self.color, self.board_state)
-                if not self.first_move:
-                    king.first_move = False
-                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
-                if not rook.first_move:
-                    rook_copy.first_move = False
-                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
-
+                append_move_history(rook)
                 self.board_state.board[7][5] = rook
                 self.board_state.board[7][7] = None
                 rook.position = [7, 5]
                 rook.first_move = False
             elif new_position == [7, 2]:
                 rook = self.board_state.board[7][0]
-
-                king = King(self.position.copy(), self.color, self.board_state)
-                if not self.first_move:
-                    king.first_move = False
-                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
-                if not rook.first_move:
-                    rook_copy.first_move = False
-                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
-
+                append_move_history(rook)
                 self.board_state.board[7][3] = rook
                 self.board_state.board[7][0] = None
                 rook.position = [7, 3]
                 rook.first_move = False
             elif new_position == [0, 6]:
                 rook = self.board_state.board[0][7]
-
-                king = King(self.position.copy(), self.color, self.board_state)
-                if not self.first_move:
-                    king.first_move = False
-                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
-                if not rook.first_move:
-                    rook_copy.first_move = False
-                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
-
+                append_move_history(rook)
                 self.board_state.board[0][5] = rook
                 self.board_state.board[0][7] = None
                 rook.position = [0, 5]
                 rook.first_move = False
             elif new_position == [0, 2]:
                 rook = self.board_state.board[0][0]
-
-                king = King(self.position.copy(), self.color, self.board_state)
-                if not self.first_move:
-                    king.first_move = False
-                rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
-                if not rook.first_move:
-                    rook_copy.first_move = False
-                self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
-
+                append_move_history(rook)
                 self.board_state.board[0][3] = rook
                 self.board_state.board[0][0] = None
                 rook.position = [0, 3]
