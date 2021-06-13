@@ -92,6 +92,7 @@ def main():
                         if BUTTONS_X[0] <= position[0] <= BUTTONS_X[1]:
                             if BUTTON_1_Y[0] <= position[1] <= BUTTON_1_Y[1]:
                                 running = False
+                                play_against_ai = False
                             elif BUTTON_2_Y[0] <= position[1] <= BUTTON_2_Y[1]:
                                 running = False
                                 play_against_ai = True
