@@ -329,7 +329,7 @@ def load_pieces():
     """Load piece's images from "pieces" folder"""
     pieces = ['bB', 'bK', 'bN', 'bP', 'bQ', 'bR', 'wB', 'wK', 'wN', 'wP', 'wQ', 'wR']
     for piece in pieces:
-        PIECES[piece] = p.transform.scale(p.image.load("pieces/" + piece + ".png"), (SQUARE_SIZE, SQUARE_SIZE))
+        PIECES[piece] = p.transform.scale(p.image.load("../pieces/" + piece + ".png"), (SQUARE_SIZE, SQUARE_SIZE))
 
 
 def draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos, view_promotion_box):
