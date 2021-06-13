@@ -2,7 +2,8 @@
 
 import pygame as p
 
-import Engine
+import Chess_AI.Engine.Chessboard as chessboard
+import Chess_AI.Engine.AI as ai
 
 """Global variables/constants concerning visualization"""
 PIECES = {}
@@ -65,7 +66,7 @@ def main():
     white_won = None
     end_state = None
 
-    chessboard_state = Engine.ChessboardState()
+    chessboard_state = chessboard.ChessboardState()
     play_against_ai = False
 
     def reset_move_attempt():
@@ -117,11 +118,11 @@ def main():
             promotion_choice = None
             white_won = None
             end_state = None
-            chessboard_state = Engine.ChessboardState()
+            chessboard_state = chessboard.ChessboardState()
 
     def make_ai_move():
         nonlocal chessboard_state, king_pos, view_ending_box, white_won, end_state
-        ai_move = Engine.ChessAI(chessboard_state).ai_move(3)
+        ai_move = ai.ChessAI(chessboard_state).ai_move(2)
         if ai_move is None:
             return
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
@@ -131,25 +132,25 @@ def main():
         p.display.flip()
 
         print(f"[AIMove]: {get_tile_str(ai_move[0])} --> {get_tile_str(ai_move[1])}")
-        if chessboard_state.game_state() == Engine.GameState.CHECK:
+        if chessboard_state.game_state() == chessboard.GameState.CHECK:
             print("[GameState]: Check")
-        elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+        elif chessboard_state.game_state() == chessboard.GameState.CHECKMATE:
             print("[GameState]: Checkmate")
             view_ending_box = True
             white_won = not chessboard_state.white_to_move
-            end_state = Engine.GameState.CHECKMATE
-        elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+            end_state = chessboard.GameState.CHECKMATE
+        elif chessboard_state.game_state() == chessboard.GameState.STALEMATE:
             print("[GameState]: Stalemate")
             view_ending_box = True
             white_won = None
-            end_state = Engine.GameState.STALEMATE
-        elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
+            end_state = chessboard.GameState.STALEMATE
+        elif chessboard_state.game_state() == chessboard.GameState.CONTINUE:
             print("[GameState]: Continue")
-        elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
+        elif chessboard_state.game_state() == chessboard.GameState.INSUFFICIENT_MATERIAL:
             print("[GameState]: Insufficient material")
             view_ending_box = True
             white_won = None
-            end_state = Engine.GameState.INSUFFICIENT_MATERIAL
+            end_state = chessboard.GameState.INSUFFICIENT_MATERIAL
 
     # Initial window
     init_game(True)
@@ -183,9 +184,9 @@ def main():
                     reset_move_attempt()
                     # Undo move
                     if play_against_ai:
-                        if (chessboard_state.game_state() == Engine.GameState.CHECKMATE or
-                                chessboard_state.game_state() == Engine.GameState.STALEMATE or
-                                chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL) and \
+                        if (chessboard_state.game_state() == chessboard.GameState.CHECKMATE or
+                                chessboard_state.game_state() == chessboard.GameState.STALEMATE or
+                                chessboard_state.game_state() == chessboard.GameState.INSUFFICIENT_MATERIAL) and \
                                 player_is_white != chessboard_state.white_to_move:
                             chessboard_state.undo_move()
                         else:
@@ -206,16 +207,16 @@ def main():
                             top_left_coords[1] <= position[1] <= bottom_left_coords[1]:
 
                         if top_left_coords[1] <= position[1] <= top_left_coords[1] + SQUARE_SIZE:
-                            promotion_choice = Engine.Queen
+                            promotion_choice = chessboard.Queen
                         elif top_left_coords[1] + SQUARE_SIZE <= position[1] <= top_left_coords[1] + 2 * SQUARE_SIZE:
-                            promotion_choice = Engine.Knight
+                            promotion_choice = chessboard.Knight
                         elif top_left_coords[1] + 2 * SQUARE_SIZE <= position[1] \
                                 <= top_left_coords[1] + 3 * SQUARE_SIZE:
-                            promotion_choice = Engine.Rook
+                            promotion_choice = chessboard.Rook
                         elif top_left_coords[1] + 3 * SQUARE_SIZE <= position[1] <= bottom_left_coords[1]:
-                            promotion_choice = Engine.Bishop
+                            promotion_choice = chessboard.Bishop
                         else:
-                            promotion_choice = Engine.Queen
+                            promotion_choice = chessboard.Queen
 
                         chessboard_state.board[tiles_clicked_on[0][0]][tiles_clicked_on[0][1]] \
                             .move(tiles_clicked_on[1], promotion_choice=promotion_choice)
@@ -267,7 +268,7 @@ def main():
                         # Second position selected
                         elif len(tiles_clicked_on) == 2:
                             if selected_tile in possible_moves:
-                                if isinstance(selected_piece, Engine.Pawn) and selected_tile[0] in [0, 7]:
+                                if isinstance(selected_piece, chessboard.Pawn) and selected_tile[0] in [0, 7]:
                                     # View promotion box
                                     view_promotion_box = True
                                 else:
@@ -280,25 +281,25 @@ def main():
                                 if not view_promotion_box:
                                     print(f"[HumanMove]: {get_tile_str(tiles_clicked_on[0])} -->"
                                           f" {get_tile_str(tiles_clicked_on[1])}")
-                                    if chessboard_state.game_state() == Engine.GameState.CHECK:
+                                    if chessboard_state.game_state() == chessboard.GameState.CHECK:
                                         print("[GameState]: Check")
-                                    elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+                                    elif chessboard_state.game_state() == chessboard.GameState.CHECKMATE:
                                         print("[GameState]: Checkmate")
                                         view_ending_box = True
                                         white_won = not chessboard_state.white_to_move
-                                        end_state = Engine.GameState.CHECKMATE
-                                    elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+                                        end_state = chessboard.GameState.CHECKMATE
+                                    elif chessboard_state.game_state() == chessboard.GameState.STALEMATE:
                                         print("[GameState]: Stalemate")
                                         view_ending_box = True
                                         white_won = None
-                                        end_state = Engine.GameState.STALEMATE
-                                    elif chessboard_state.game_state() == Engine.GameState.CONTINUE:
+                                        end_state = chessboard.GameState.STALEMATE
+                                    elif chessboard_state.game_state() == chessboard.GameState.CONTINUE:
                                         print("[GameState]: Continue")
-                                    elif chessboard_state.game_state() == Engine.GameState.INSUFFICIENT_MATERIAL:
+                                    elif chessboard_state.game_state() == chessboard.GameState.INSUFFICIENT_MATERIAL:
                                         print("[GameState]: Insufficient material")
                                         view_ending_box = True
                                         white_won = None
-                                        end_state = Engine.GameState.INSUFFICIENT_MATERIAL
+                                        end_state = chessboard.GameState.INSUFFICIENT_MATERIAL
                                     reset_move_attempt()
                             # First position selected v2
                             else:
@@ -380,18 +381,18 @@ def highlight_possible_moves(selected_tile, possible_moves, chessboard_state):
 
 def highlight_king(chessboard_state, king_pos):
     """Highlight appropriate king that is being checked, checkmated or stalemated"""
-    if chessboard_state.game_state() == Engine.GameState.CHECK:
+    if chessboard_state.game_state() == chessboard.GameState.CHECK:
         p.draw.rect(SCREEN, COLOR_CHECK,
                     p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
         p.draw.circle(SCREEN, get_tile_color(king_pos[0], king_pos[1]),
                       (king_pos[1] * SQUARE_SIZE + SQUARE_SIZE // 2, king_pos[0] * SQUARE_SIZE + SQUARE_SIZE // 2),
                       SQUARE_SIZE // 2)
 
-    elif chessboard_state.game_state() == Engine.GameState.CHECKMATE:
+    elif chessboard_state.game_state() == chessboard.GameState.CHECKMATE:
         p.draw.rect(SCREEN, COLOR_CHECK,
                     p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
 
-    elif chessboard_state.game_state() == Engine.GameState.STALEMATE:
+    elif chessboard_state.game_state() == chessboard.GameState.STALEMATE:
         p.draw.rect(SCREEN, COLOR_STALEMATE,
                     p.Rect(king_pos[1] * SQUARE_SIZE, king_pos[0] * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
         p.draw.circle(SCREEN, get_tile_color(king_pos[0], king_pos[1]),
@@ -482,11 +483,11 @@ def draw_game_ending(state, white_wins=None):
         SCREEN.blit(label, label_rect)
 
     bottom_text = "State: "
-    if state == Engine.GameState.STALEMATE:
+    if state == chessboard.GameState.STALEMATE:
         bottom_text += "Stalemate"
-    elif state == Engine.GameState.INSUFFICIENT_MATERIAL:
+    elif state == chessboard.GameState.INSUFFICIENT_MATERIAL:
         bottom_text += "Too few pieces"
-    elif state == Engine.GameState.CHECKMATE:
+    elif state == chessboard.GameState.CHECKMATE:
         bottom_text += "Checkmate"
     label = font.render(bottom_text, True, COLOR_DARK)
     label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
