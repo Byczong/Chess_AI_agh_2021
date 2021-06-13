@@ -121,7 +121,7 @@ class ChessboardState:
                 return True
 
     def is_move_valid(self, old_position, new_position):
-        def undo(en_passant):
+        def undo():
             self.board[old_position[0]][old_position[1]] = old_position_piece
             self.board[new_position[0]][new_position[1]] = new_position_piece
             old_position_piece.position = old_position
@@ -154,21 +154,20 @@ class ChessboardState:
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
             if not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
-                if threat_position_piece is not None:
-                    if not king.is_same_color(threat_position_piece):
-                        if threat_position_piece.type == PieceType.KING:
-                            undo(en_passant)
-                            return False
+                if threat_position_piece is not None and not king.is_same_color(threat_position_piece) \
+                        and threat_position_piece.type == PieceType.KING:
+                    undo()
+                    return False
 
         for step in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
             while not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
-                    if not king.is_same_color(threat_position_piece):
-                        if threat_position_piece.type == PieceType.ROOK or threat_position_piece.type == PieceType.QUEEN:
-                            undo(en_passant)
-                            return False
+                    if not king.is_same_color(threat_position_piece) and \
+                            (threat_position_piece.type == PieceType.ROOK or threat_position_piece.type == PieceType.QUEEN):
+                        undo()
+                        return False
                     break
                 else:
                     threat_position[0] += step[0]
@@ -179,10 +178,10 @@ class ChessboardState:
             while not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
                 if threat_position_piece is not None:
-                    if not king.is_same_color(threat_position_piece):
-                        if threat_position_piece.type == PieceType.BISHOP or threat_position_piece.type == PieceType.QUEEN:
-                            undo(en_passant)
-                            return False
+                    if not king.is_same_color(threat_position_piece) and \
+                            (threat_position_piece.type == PieceType.BISHOP or threat_position_piece.type == PieceType.QUEEN):
+                        undo()
+                        return False
                     break
                 else:
                     threat_position[0] += step[0]
@@ -192,23 +191,21 @@ class ChessboardState:
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
             if not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
-                if threat_position_piece is not None:
-                    if not king.is_same_color(threat_position_piece):
-                        if threat_position_piece.type == PieceType.KNIGHT:
-                            undo(en_passant)
-                            return False
+                if threat_position_piece is not None and not king.is_same_color(threat_position_piece) \
+                        and threat_position_piece.type == PieceType.KNIGHT:
+                    undo()
+                    return False
 
         for step in ((pawn_row_step, -1), (pawn_row_step, 1)):
             threat_position = [king.position[0] + step[0], king.position[1] + step[1]]
             if not ChessboardState.is_move_out_of_board(threat_position):
                 threat_position_piece = self.board[threat_position[0]][threat_position[1]]
-                if threat_position_piece is not None:
-                    if not king.is_same_color(threat_position_piece):
-                        if threat_position_piece.type == PieceType.PAWN:
-                            undo(en_passant)
-                            return False
+                if threat_position_piece is not None and not king.is_same_color(threat_position_piece) \
+                        and threat_position_piece.type == PieceType.PAWN:
+                    undo()
+                    return False
 
-        undo(en_passant)
+        undo()
         return True
 
     def get_pieces_lists(self):
