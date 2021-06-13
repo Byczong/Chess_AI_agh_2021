@@ -245,7 +245,6 @@ class ChessboardState:
                 elif captured_piece.position == [0, 0]:
                     self.board[0][3] = None
 
-
         if moved_piece.type == PieceType.KING:
             if moved_piece.color == Color.WHITE:
                 self.white_king = moved_piece
@@ -361,49 +360,37 @@ class King(Piece):
     def move(self, new_position):
         def append_move_history(rook):
             king = King(self.position.copy(), self.color, self.board_state)
-            if not self.first_move:
-                king.first_move = False
+            king.first_move = self.first_move
             rook_copy = Rook(rook.position.copy(), self.color, self.board_state)
-            if not rook.first_move:
-                rook_copy.first_move = False
+            rook_copy.first_move = rook.first_move
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, rook_copy))
 
         self.board_state.move_counter += 1
         castling = False
         if abs(self.position[1] - new_position[1]) == 2:
             castling = True
+            rook = None
+            rook_new_position = None
             if new_position == [7, 6]:
                 rook = self.board_state.board[7][7]
-                append_move_history(rook)
-                self.board_state.board[7][5] = rook
-                self.board_state.board[7][7] = None
-                rook.position = [7, 5]
-                rook.first_move = False
+                rook_new_position = [7, 5]
             elif new_position == [7, 2]:
                 rook = self.board_state.board[7][0]
-                append_move_history(rook)
-                self.board_state.board[7][3] = rook
-                self.board_state.board[7][0] = None
-                rook.position = [7, 3]
-                rook.first_move = False
+                rook_new_position = [7, 3]
             elif new_position == [0, 6]:
                 rook = self.board_state.board[0][7]
-                append_move_history(rook)
-                self.board_state.board[0][5] = rook
-                self.board_state.board[0][7] = None
-                rook.position = [0, 5]
-                rook.first_move = False
+                rook_new_position = [0, 5]
             elif new_position == [0, 2]:
                 rook = self.board_state.board[0][0]
-                append_move_history(rook)
-                self.board_state.board[0][3] = rook
-                self.board_state.board[0][0] = None
-                rook.position = [0, 3]
-                rook.first_move = False
+                rook_new_position = [0, 3]
+            append_move_history(rook)
+            self.board_state.board[rook_new_position[0]][rook_new_position[1]] = rook
+            self.board_state.board[rook.position[0]][rook.position[1]] = None
+            rook.position = rook_new_position
+            rook.first_move = False
 
         king = King(self.position.copy(), self.color, self.board_state)
-        if not self.first_move:
-            king.first_move = False
+        king.first_move = self.first_move
         if not castling:
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), king, self.board_state.board[new_position[0]][new_position[1]]))
 
@@ -468,8 +455,7 @@ class Rook(Piece):
 
     def move(self, new_position):
         rook = Rook(self.position.copy(), self.color, self.board_state)
-        if not self.first_move:
-            rook.first_move = False
+        rook.first_move = self.first_move
         self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), rook,
                                                    self.board_state.board[new_position[0]][new_position[1]]))
         self.board_state.move_counter += 1
@@ -540,25 +526,21 @@ class Pawn(Piece):
         self.last_move_number = None
         self.moved_by_two = False
         self.type = PieceType.PAWN
+        self.row_step = -1 if color == Color.WHITE else 1
 
     def pseudo_legal_moves(self):
-        if self.color == Color.WHITE:
-            row_step = -1
-        else:
-            row_step = 1
-
-        new_position = [self.position[0] + row_step, self.position[1]]
+        new_position = [self.position[0] + self.row_step, self.position[1]]
         if not ChessboardState.is_move_out_of_board(new_position):
             new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
             if new_position_piece is None:
                 yield new_position
-                new_position[0] += row_step
+                new_position[0] += self.row_step
                 if not ChessboardState.is_move_out_of_board(new_position) and self.first_move:
                     new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
                     if new_position_piece is None:
                         yield new_position
 
-        for step in ((row_step, -1), (row_step, 1)):
+        for step in ((self.row_step, -1), (self.row_step, 1)):
             new_position = [self.position[0] + step[0], self.position[1] + step[1]]
             if not ChessboardState.is_move_out_of_board(new_position):
                 new_position_piece = self.board_state.board[new_position[0]][new_position[1]]
@@ -574,15 +556,13 @@ class Pawn(Piece):
                     if not self.is_same_color(new_position_piece) and new_position_piece.type == PieceType.PAWN:
                         if new_position_piece.last_move_number == self.board_state.move_counter and \
                                 new_position_piece.moved_by_two:
-                            new_position[0] += row_step
+                            new_position[0] += self.row_step
                             yield new_position
 
     def move(self, new_position, promotion_choice=Queen):
         pawn = Pawn(self.position.copy(), self.color, self.board_state)
-        if not self.first_move:
-            pawn.first_move = False
-        if self.moved_by_two:
-            pawn.moved_by_two = True
+        pawn.first_move = self.first_move
+        pawn.moved_by_two = self.moved_by_two
         pawn.last_move_number = self.last_move_number
 
         self.board_state.move_counter += 1
@@ -597,13 +577,9 @@ class Pawn(Piece):
         if self.board_state.board[new_position[0]][new_position[1]] is None and \
                 abs(new_position[1] - self.position[1]) == 1:
             en_passant = True
-            if self.color == Color.WHITE:
-                pawn_row_step = -1
-            else:
-                pawn_row_step = 1
             self.board_state.moves_history.append(Move(self.position.copy(), new_position.copy(), pawn,
-                                                       self.board_state.board[new_position[0] - pawn_row_step][new_position[1]]))
-            self.board_state.board[new_position[0] - pawn_row_step][new_position[1]] = None
+                                                       self.board_state.board[new_position[0] - self.row_step][new_position[1]]))
+            self.board_state.board[new_position[0] - self.row_step][new_position[1]] = None
 
 
         pawn_promotion = False
