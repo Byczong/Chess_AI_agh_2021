@@ -211,6 +211,16 @@ class ChessboardState:
         undo(en_passant)
         return True
 
+    def get_pieces_lists(self):
+        pieces_lists = [None] * 6
+        for i in range(6):
+            pieces_lists[i] = [[], []]
+        for row in range(8):
+            for column in range(8):
+                piece = self.board[row][column]
+                if piece is not None:
+                    pieces_lists[piece.type][piece.color].append(piece)
+        return pieces_lists
 
     def undo_move(self):
         if len(self.moves_history) == 0:
