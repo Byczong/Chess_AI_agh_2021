@@ -7,9 +7,12 @@ import Chess_AI.Engine.Chessboard as chessboard
 import Chess_AI.Engine.AI as ai
 
 """Global variables/constants concerning visualization"""
-PIECES = {}
+
+# Change these to scale the game.
 CHESSBOARD_WIDTH, CHESSBOARD_HEIGHT = 512, 512
 BORDER_WIDTH = 32
+
+PIECES = {}
 WIDTH, HEIGHT = CHESSBOARD_WIDTH + BORDER_WIDTH, CHESSBOARD_HEIGHT + BORDER_WIDTH
 SCREEN = p.display.set_mode((WIDTH, HEIGHT))
 SQUARE_SIZE = CHESSBOARD_HEIGHT // 8
@@ -35,6 +38,7 @@ RECT_GAME_END_Y = (HEIGHT // 4, HEIGHT // 4 + RECT_GAME_END_HEIGHT)
 BUTTON_CLOSE_POPUP_X = (WIDTH // 2 - BUTTON_WIDTH // 2, WIDTH // 2 + BUTTON_WIDTH // 2)
 BUTTON_CLOSE_POPUP_Y = (HEIGHT // 8 - BUTTON_HEIGHT // 2 + HEIGHT // 2, HEIGHT // 8 + BUTTON_HEIGHT // 2 + HEIGHT // 2)
 
+# Colors
 COLOR_LIGHT = p.Color((255, 235, 205))
 COLOR_DARK = p.Color((140, 80, 42))
 COLOR_HIGHLIGHT = p.Color((53, 180, 159))
