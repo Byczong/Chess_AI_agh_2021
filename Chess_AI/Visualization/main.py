@@ -1,6 +1,7 @@
 """Main driver file - visualization and user interaction"""
 
 import pygame as p
+import threading
 
 import Chess_AI.Engine.Chessboard as chessboard
 import Chess_AI.Engine.AI as ai
@@ -43,6 +44,23 @@ COLOR_BORDER = p.Color(173, 116, 59)
 
 BOARD_RANKS = ['1', '2', '3', '4', '5', '6', '7', '8']
 BOARD_FILES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+
+class ThreadAI(threading.Thread):
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs=None, Verbose=None):
+        threading.Thread.__init__(self, group, target, name, args, kwargs)
+        if kwargs is None:
+            kwargs = {}
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+
+    def join(self, *args):
+        threading.Thread.join(self, *args)
+        return self._return
 
 
 def main():
@@ -123,7 +141,15 @@ def main():
 
     def make_ai_move():
         nonlocal chessboard_state, king_pos, view_ending_box, white_won, end_state
-        ai_move = ai.ChessAI(chessboard_state).ai_move(2)
+
+        ai_thread = ThreadAI(target=ai.ChessAI(chessboard_state).ai_move, args=(3,))
+        ai_thread.start()
+
+        while ai_thread.is_alive():
+            clock.tick(FPS)
+
+        ai_move = ai_thread.join()
+
         if ai_move is None:
             return
         chessboard_state.board[ai_move[0][0]][ai_move[0][1]].move(ai_move[1])
@@ -334,7 +360,7 @@ def load_pieces():
 
 
 def draw_chessboard_state(chessboard_state, selected_tile, possible_moves, king_pos, view_promotion_box):
-    """Show the game"""
+    """Draw the game"""
     draw_chessboard()
     if king_pos is not None:
         highlight_king(chessboard_state, king_pos)
@@ -504,7 +530,7 @@ def draw_game_ending(state, white_wins=None):
     p.draw.line(SCREEN, COLOR_BORDER, (BUTTONS_X[0], BUTTON_3_Y[0]),
                 (BUTTONS_X[0], BUTTON_3_Y[1]), width=2)
 
-    label = font.render("Close pop-up", True, COLOR_DARK)
+    label = font.render("Close", True, COLOR_DARK)
     label_rect = label.get_rect(center=(((RECT_GAME_END_X[0] + RECT_GAME_END_X[1]) // 2),
                                         (RECT_GAME_END_Y[1] + (RECT_GAME_END_Y[0] + RECT_GAME_END_Y[1]) // 2) // 2))
     SCREEN.blit(label, label_rect)
