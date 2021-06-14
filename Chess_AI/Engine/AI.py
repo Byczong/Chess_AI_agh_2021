@@ -71,6 +71,7 @@ class BoardEvaluation:
                        chessboard.PieceType.PAWN: 100}
 
     def evaluate(self):
+        """Get board evaluation score"""
         game_state = self.board_state.game_state()
         if game_state == chessboard.GameState.CHECKMATE:
             return -99999 if self.board_state.white_to_move else 99999
@@ -82,6 +83,7 @@ class BoardEvaluation:
             return evaluation if self.board_state.white_to_move else -evaluation
 
     def material_score(self, pieces_lists):
+        """Get board material evaluation score"""
         material_score = 0
         for piece_type in chessboard.PieceType.piece_type_list():
             material_score += self.values[piece_type] * (len(pieces_lists[piece_type][chessboard.Color.WHITE]) -
@@ -89,6 +91,7 @@ class BoardEvaluation:
         return material_score
 
     def position_score(self, pieces_lists):
+        """Get board position evaluation score"""
         position_score = 0
         for piece_type in chessboard.PieceType.piece_type_list():
             for piece in pieces_lists[piece_type][chessboard.Color.WHITE]:
@@ -104,6 +107,7 @@ class ChessAI:
         self.evaluator = BoardEvaluation(board_state)
 
     def ai_move(self, depth=3):
+        """Get next AI move. Move searching depth is set by depth"""
         best_move = None
         best_board_evaluation = -99999
         alpha = -100000
